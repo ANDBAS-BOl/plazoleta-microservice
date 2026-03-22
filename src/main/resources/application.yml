@@ -1,0 +1,34 @@
+server:
+  port: 8082
+
+spring:
+  datasource:
+    url: ${DB_PLAZOLETA_URL:jdbc:mysql://localhost:3306/pragma_plazoleta?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC}
+    username: ${DB_PLAZOLETA_USER:pragma_user}
+    password: ${DB_PLAZOLETA_PASSWORD:pragma_pass}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: ${SHOW_SQL:false}
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQL8Dialect
+        format_sql: true
+
+# JWT – Plazoleta solo valida, no emite
+security:
+  jwt:
+    secret: ${JWT_SECRET:pragma_super_secret_key_change_in_production}
+
+# URLs de microservicios dependientes
+microservices:
+  usuarios:
+    url: ${USUARIOS_BASE_URL:http://localhost:8081}
+  trazabilidad:
+    url: ${TRAZABILIDAD_BASE_URL:http://localhost:8083}
+  mensajeria:
+    url: ${MENSAJERIA_BASE_URL:http://localhost:8084}
+
+appDescription: "Pragma Plazoleta Microservice"
+appVersion: "1.0.0"
