@@ -1,5 +1,3 @@
-version: "3.8"
-
 services:
   plazoleta:
     container_name: pragma-plazoleta
