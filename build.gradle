@@ -53,6 +53,9 @@ dependencies {
 	annotationProcessor "org.projectlombok:lombok:${lombokVersion}"
 
 	implementation "org.springdoc:springdoc-openapi-ui:${openApiVersion}"
+
+	// Stubs para pruebas por contrato (Fase 6)
+	testImplementation "com.github.tomakehurst:wiremock-jre8:2.35.2"
 }
 
 tasks.named('test') {

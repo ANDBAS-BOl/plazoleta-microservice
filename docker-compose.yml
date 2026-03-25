@@ -1,0 +1,23 @@
+version: "3.8"
+
+services:
+  plazoleta:
+    container_name: pragma-plazoleta
+    build: .
+    ports:
+      - "8082:8082"
+    environment:
+      JWT_SECRET: pragma_super_secret_key_change_in_production
+      DB_PLAZOLETA_URL: jdbc:mysql://pragma-mysql:3306/pragma_plazoleta?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      DB_PLAZOLETA_USER: pragma_user
+      DB_PLAZOLETA_PASSWORD: pragma_pass
+      USUARIOS_BASE_URL: http://pragma-usuarios:8081
+      TRAZABILIDAD_BASE_URL: http://pragma-trazabilidad:8083
+      MENSAJERIA_BASE_URL: http://pragma-mensajeria:8084
+    networks:
+      - pragma-net
+
+networks:
+  pragma-net:
+    external: true
+
