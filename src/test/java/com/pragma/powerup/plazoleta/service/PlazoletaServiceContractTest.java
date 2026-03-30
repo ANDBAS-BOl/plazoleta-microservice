@@ -5,9 +5,13 @@ import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
 import com.pragma.powerup.plazoleta.client.AuthHeaderProvider;
 import com.pragma.powerup.plazoleta.client.MensajeriaClient;
 import com.pragma.powerup.plazoleta.client.TrazabilidadClient;
+import com.pragma.powerup.plazoleta.domain.api.CatalogUseCasePort;
 import com.pragma.powerup.plazoleta.domain.EstadoPedido;
 import com.pragma.powerup.plazoleta.domain.OrderEntity;
 import com.pragma.powerup.plazoleta.domain.RestaurantEntity;
+import com.pragma.powerup.plazoleta.domain.usecase.CatalogUseCase;
+import com.pragma.powerup.plazoleta.infrastructure.out.http.adapter.UsuariosValidationAdapter;
+import com.pragma.powerup.plazoleta.infrastructure.out.jpa.adapter.CatalogJpaAdapter;
 import com.pragma.powerup.plazoleta.repository.DishRepository;
 import com.pragma.powerup.plazoleta.repository.EmployeeRestaurantRepository;
 import com.pragma.powerup.plazoleta.repository.OrderRepository;
@@ -46,6 +50,7 @@ class PlazoletaServiceContractTest {
     private EmployeeRestaurantRepository employeeRestaurantRepository;
     private AuthUtils authUtils;
     private UsuariosClient usuariosClient;
+    private CatalogUseCasePort catalogUseCasePort;
 
     private TrazabilidadClient trazabilidadClient;
     private MensajeriaClient mensajeriaClient;
@@ -69,6 +74,7 @@ class PlazoletaServiceContractTest {
         employeeRestaurantRepository = mock(EmployeeRestaurantRepository.class);
         authUtils = mock(AuthUtils.class);
         usuariosClient = mock(UsuariosClient.class);
+        catalogUseCasePort = mock(CatalogUseCasePort.class);
         pinGenerator = mock(PinGenerator.class);
 
         authHeaderProvider = () -> Optional.of("Bearer test-token");
@@ -81,6 +87,7 @@ class PlazoletaServiceContractTest {
                 dishRepository,
                 orderRepository,
                 employeeRestaurantRepository,
+                catalogUseCasePort,
                 authUtils,
                 usuariosClient,
                 trazabilidadClient,
@@ -260,6 +267,10 @@ class PlazoletaServiceContractTest {
                 dishRepository,
                 orderRepository,
                 employeeRestaurantRepository,
+                new CatalogUseCase(
+                        new CatalogJpaAdapter(restaurantRepository, dishRepository),
+                        new UsuariosValidationAdapter(realUsuariosClient)
+                ),
                 authUtils,
                 realUsuariosClient,
                 trazabilidadClient,

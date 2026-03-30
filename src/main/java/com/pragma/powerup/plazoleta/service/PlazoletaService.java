@@ -4,7 +4,10 @@ import com.pragma.powerup.plazoleta.client.AuthHeaderProvider;
 import com.pragma.powerup.plazoleta.client.MensajeriaClient;
 import com.pragma.powerup.plazoleta.client.TrazabilidadClient;
 import com.pragma.powerup.plazoleta.client.UsuariosClient;
+import com.pragma.powerup.plazoleta.domain.api.CatalogUseCasePort;
 import com.pragma.powerup.plazoleta.domain.*;
+import com.pragma.powerup.plazoleta.domain.model.DishModel;
+import com.pragma.powerup.plazoleta.domain.model.RestaurantModel;
 import com.pragma.powerup.plazoleta.repository.DishRepository;
 import com.pragma.powerup.plazoleta.repository.EmployeeRestaurantRepository;
 import com.pragma.powerup.plazoleta.repository.OrderRepository;
@@ -24,7 +27,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.*;
@@ -38,6 +40,7 @@ public class PlazoletaService {
     private final DishRepository dishRepository;
     private final OrderRepository orderRepository;
     private final EmployeeRestaurantRepository employeeRestaurantRepository;
+    private final CatalogUseCasePort catalogUseCasePort;
     private final AuthUtils authUtils;
     private final UsuariosClient usuariosClient;
     private final TrazabilidadClient trazabilidadClient;
@@ -53,74 +56,45 @@ public class PlazoletaService {
     @Transactional
     public Long createRestaurant(CreateRestaurantRequest request) {
         requireRole(Rol.ADMINISTRADOR);
-        if (!request.nit().matches("\\d+")) {
-            throw badRequest("El NIT debe ser numerico");
-        }
-        if (!request.telefono().matches("^\\+?\\d{1,13}$")) {
-            throw badRequest("Telefono invalido");
-        }
-        if (request.nombre().matches("^\\d+$")) {
-            throw badRequest("Nombre de restaurante invalido");
-        }
-        if (!usuariosClient.validarRolPropietario(request.idPropietario())) {
-            throw badRequest("El idPropietario no corresponde a un usuario con rol PROPIETARIO");
-        }
-
-        RestaurantEntity entity = new RestaurantEntity();
-        entity.setNombre(request.nombre());
-        entity.setNit(request.nit());
-        entity.setDireccion(request.direccion());
-        entity.setTelefono(request.telefono());
-        entity.setUrlLogo(request.urlLogo());
-        entity.setIdPropietario(request.idPropietario());
-        return restaurantRepository.save(entity).getId();
+        RestaurantModel model = RestaurantModel.builder()
+                .nombre(request.nombre())
+                .nit(request.nit())
+                .direccion(request.direccion())
+                .telefono(request.telefono())
+                .urlLogo(request.urlLogo())
+                .idPropietario(request.idPropietario())
+                .build();
+        return catalogUseCasePort.createRestaurant(model);
     }
 
     @Transactional
     public Long createDish(CreateDishRequest request) {
         Long userId = requireRole(Rol.PROPIETARIO);
-        RestaurantEntity restaurant = restaurantRepository.findById(request.idRestaurante())
-                .orElseThrow(() -> notFound("Restaurante no existe"));
-        if (!restaurant.getIdPropietario().equals(userId)) {
-            throw forbidden("No puedes crear platos en restaurantes de otro propietario");
-        }
-        if (request.precio().compareTo(BigDecimal.ZERO) <= 0) {
-            throw badRequest("El precio debe ser mayor a 0");
-        }
-
-        DishEntity dish = new DishEntity();
-        dish.setNombre(request.nombre());
-        dish.setPrecio(request.precio());
-        dish.setDescripcion(request.descripcion());
-        dish.setUrlImagen(request.urlImagen());
-        dish.setCategoria(request.categoria());
-        dish.setRestaurant(restaurant);
-        dish.setActivo(true);
-        return dishRepository.save(dish).getId();
+        DishModel model = DishModel.builder()
+                .idRestaurante(request.idRestaurante())
+                .nombre(request.nombre())
+                .precio(request.precio())
+                .descripcion(request.descripcion())
+                .urlImagen(request.urlImagen())
+                .categoria(request.categoria())
+                .build();
+        return catalogUseCasePort.createDish(model, userId);
     }
 
     @Transactional
     public void updateDish(Long idDish, UpdateDishRequest request) {
         Long ownerId = requireRole(Rol.PROPIETARIO);
-        DishEntity dish = dishRepository.findById(idDish).orElseThrow(() -> notFound("Plato no existe"));
-        if (!dish.getRestaurant().getIdPropietario().equals(ownerId)) {
-            throw forbidden("No puedes modificar platos de otro restaurante");
-        }
-        if (request.precio().compareTo(BigDecimal.ZERO) <= 0) {
-            throw badRequest("El precio debe ser mayor a 0");
-        }
-        dish.setPrecio(request.precio());
-        dish.setDescripcion(request.descripcion());
+        DishModel model = DishModel.builder()
+                .precio(request.precio())
+                .descripcion(request.descripcion())
+                .build();
+        catalogUseCasePort.updateDish(idDish, ownerId, model);
     }
 
     @Transactional
     public void setDishActive(Long idDish, boolean active) {
         Long ownerId = requireRole(Rol.PROPIETARIO);
-        DishEntity dish = dishRepository.findById(idDish).orElseThrow(() -> notFound("Plato no existe"));
-        if (!dish.getRestaurant().getIdPropietario().equals(ownerId)) {
-            throw forbidden("No puedes modificar platos de otro restaurante");
-        }
-        dish.setActivo(active);
+        catalogUseCasePort.setDishActive(idDish, ownerId, active);
     }
 
     @Transactional
@@ -150,16 +124,14 @@ public class PlazoletaService {
 
     public Page<RestaurantCardResponse> listRestaurants(Pageable pageable) {
         requireRole(Rol.CLIENTE);
-        return restaurantRepository.findAll(pageable)
+        return catalogUseCasePort.listRestaurants(pageable)
                 .map(r -> new RestaurantCardResponse(r.getId(), r.getNombre(), r.getUrlLogo()));
     }
 
     public Page<DishResponse> listDishes(Long restaurantId, String categoria, Pageable pageable) {
         requireRole(Rol.CLIENTE);
-        Page<DishEntity> page = (categoria == null || categoria.isBlank())
-                ? dishRepository.findByRestaurantIdAndActivoTrue(restaurantId, pageable)
-                : dishRepository.findByRestaurantIdAndActivoTrueAndCategoriaIgnoreCase(restaurantId, categoria, pageable);
-        return page.map(this::toDishResponse);
+        return catalogUseCasePort.listDishes(restaurantId, categoria, pageable)
+                .map(this::toDishResponse);
     }
 
     @Transactional
@@ -350,7 +322,7 @@ public class PlazoletaService {
         throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "No se pudo generar un PIN único");
     }
 
-    private DishResponse toDishResponse(DishEntity d) {
+    private DishResponse toDishResponse(DishModel d) {
         return new DishResponse(d.getId(), d.getNombre(), d.getPrecio(), d.getDescripcion(), d.getUrlImagen(), d.getCategoria(), d.getActivo());
     }
 

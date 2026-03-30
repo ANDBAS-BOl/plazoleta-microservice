@@ -4,6 +4,7 @@ import com.pragma.powerup.plazoleta.client.AuthHeaderProvider;
 import com.pragma.powerup.plazoleta.client.MensajeriaClient;
 import com.pragma.powerup.plazoleta.client.TrazabilidadClient;
 import com.pragma.powerup.plazoleta.client.UsuariosClient;
+import com.pragma.powerup.plazoleta.domain.api.CatalogUseCasePort;
 import com.pragma.powerup.plazoleta.domain.EstadoPedido;
 import com.pragma.powerup.plazoleta.domain.OrderEntity;
 import com.pragma.powerup.plazoleta.domain.RestaurantEntity;
@@ -40,6 +41,7 @@ class PlazoletaServiceTest {
     private DishRepository dishRepository;
     private OrderRepository orderRepository;
     private EmployeeRestaurantRepository employeeRestaurantRepository;
+    private CatalogUseCasePort catalogUseCasePort;
     private AuthUtils authUtils;
     private UsuariosClient usuariosClient;
     private TrazabilidadClient trazabilidadClient;
@@ -54,6 +56,7 @@ class PlazoletaServiceTest {
         dishRepository = mock(DishRepository.class);
         orderRepository = mock(OrderRepository.class);
         employeeRestaurantRepository = mock(EmployeeRestaurantRepository.class);
+        catalogUseCasePort = mock(CatalogUseCasePort.class);
         authUtils = mock(AuthUtils.class);
         usuariosClient = mock(UsuariosClient.class);
         trazabilidadClient = mock(TrazabilidadClient.class);
@@ -65,6 +68,7 @@ class PlazoletaServiceTest {
                 dishRepository,
                 orderRepository,
                 employeeRestaurantRepository,
+                catalogUseCasePort,
                 authUtils,
                 usuariosClient,
                 trazabilidadClient,
@@ -130,9 +134,11 @@ class PlazoletaServiceTest {
     }
 
     @Test
-    void createRestaurantShouldFailWhenOwnerIsNotPropietario() {
+    void createRestaurantShouldPropagateDomainValidationWhenOwnerIsNotPropietario() {
         when(authUtils.currentUser()).thenReturn(new UsuarioPrincipal(1L, "admin@test.local", Rol.ADMINISTRADOR));
-        when(usuariosClient.validarRolPropietario(200L)).thenReturn(false);
+        when(catalogUseCasePort.createRestaurant(any())).thenThrow(
+                new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                        "El idPropietario no corresponde a un usuario con rol PROPIETARIO"));
 
         var request = new com.pragma.powerup.plazoleta.web.dto.CreateRestaurantRequest(
                 "Restaurante Uno", "123456", "Calle 1", "+573001112233", "http://logo", 200L);
