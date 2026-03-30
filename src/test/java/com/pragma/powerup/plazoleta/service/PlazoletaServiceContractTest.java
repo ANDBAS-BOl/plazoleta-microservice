@@ -88,6 +88,14 @@ class PlazoletaServiceContractTest {
                 pinGenerator,
                 authHeaderProvider
         );
+
+        try {
+            var field = PlazoletaService.class.getDeclaredField("trazabilidadBaseUrl");
+            field.setAccessible(true);
+            field.set(service, baseUrl);
+        } catch (ReflectiveOperationException e) {
+            throw new RuntimeException("No fue posible inicializar trazabilidadBaseUrl para pruebas", e);
+        }
     }
 
     @AfterEach
@@ -272,6 +280,51 @@ class PlazoletaServiceContractTest {
         assertEquals(999L, id);
         com.github.tomakehurst.wiremock.client.WireMock.verify(1,
                 getRequestedFor(urlEqualTo("/api/v1/usuarios/200/validacion-propietario")));
+    }
+
+    @Test
+    void assignEmployeeShouldValidateEmployeeViaUsuariosContract() {
+        UsuariosClient realUsuariosClient = new UsuariosClient(baseUrl, authHeaderProvider);
+
+        stubFor(get(urlEqualTo("/api/v1/usuarios/500/validacion-empleado"))
+                .withHeader("Authorization", equalTo("Bearer test-token"))
+                .willReturn(aResponse()
+                        .withStatus(200)
+                        .withHeader("Content-Type", "application/json")
+                        .withBody("""
+                                {
+                                  "idUsuario": 500,
+                                  "rol": "EMPLEADO",
+                                  "empleadoValido": true
+                                }
+                                """)));
+
+        assertTrue(realUsuariosClient.validarRolEmpleado(500L));
+        com.github.tomakehurst.wiremock.client.WireMock.verify(1,
+                getRequestedFor(urlEqualTo("/api/v1/usuarios/500/validacion-empleado")));
+    }
+
+    @Test
+    void getTraceShouldCallTrazabilidadReadContract() {
+        when(authUtils.currentUser()).thenReturn(new UsuarioPrincipal(50L, "client@test.local", Rol.CLIENTE));
+
+        stubFor(get(urlEqualTo("/api/v1/trazabilidad/pedidos/10"))
+                .withHeader("Authorization", equalTo("Bearer test-token"))
+                .willReturn(aResponse()
+                        .withStatus(200)
+                        .withHeader("Content-Type", "application/json")
+                        .withBody("""
+                                {
+                                  "idPedido": 10,
+                                  "eventos": []
+                                }
+                                """)));
+
+        Object response = service.getTrace(10L);
+        assertNotNull(response);
+
+        com.github.tomakehurst.wiremock.client.WireMock.verify(1,
+                getRequestedFor(urlEqualTo("/api/v1/trazabilidad/pedidos/10")));
     }
 }
 
