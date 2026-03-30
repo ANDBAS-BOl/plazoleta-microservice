@@ -5,10 +5,15 @@ import com.pragma.powerup.plazoleta.client.MensajeriaClient;
 import com.pragma.powerup.plazoleta.client.TrazabilidadClient;
 import com.pragma.powerup.plazoleta.client.UsuariosClient;
 import com.pragma.powerup.plazoleta.domain.api.CatalogUseCasePort;
+import com.pragma.powerup.plazoleta.domain.api.OrderUseCasePort;
 import com.pragma.powerup.plazoleta.domain.EstadoPedido;
 import com.pragma.powerup.plazoleta.domain.OrderEntity;
 import com.pragma.powerup.plazoleta.domain.RestaurantEntity;
 import com.pragma.powerup.plazoleta.domain.EmployeeRestaurantEntity;
+import com.pragma.powerup.plazoleta.domain.usecase.OrderUseCase;
+import com.pragma.powerup.plazoleta.infrastructure.out.http.adapter.OrderMessagingAdapter;
+import com.pragma.powerup.plazoleta.infrastructure.out.http.adapter.OrderTraceabilityAdapter;
+import com.pragma.powerup.plazoleta.infrastructure.out.jpa.adapter.OrderJpaAdapter;
 import com.pragma.powerup.plazoleta.repository.DishRepository;
 import com.pragma.powerup.plazoleta.repository.EmployeeRestaurantRepository;
 import com.pragma.powerup.plazoleta.repository.OrderRepository;
@@ -48,6 +53,7 @@ class PlazoletaServiceTest {
     private MensajeriaClient mensajeriaClient;
     private PinGenerator pinGenerator;
     private AuthHeaderProvider authHeaderProvider;
+    private OrderUseCasePort orderUseCasePort;
     private PlazoletaService service;
 
     @BeforeEach
@@ -63,17 +69,24 @@ class PlazoletaServiceTest {
         mensajeriaClient = mock(MensajeriaClient.class);
         pinGenerator = mock(PinGenerator.class);
         authHeaderProvider = mock(AuthHeaderProvider.class);
+        orderUseCasePort = new OrderUseCase(
+                new OrderJpaAdapter(
+                        restaurantRepository,
+                        dishRepository,
+                        orderRepository,
+                        employeeRestaurantRepository),
+                new OrderTraceabilityAdapter(trazabilidadClient),
+                new OrderMessagingAdapter(mensajeriaClient),
+                pinGenerator::generarPin6Digitos);
         service = new PlazoletaService(
                 restaurantRepository,
                 dishRepository,
                 orderRepository,
                 employeeRestaurantRepository,
                 catalogUseCasePort,
+                orderUseCasePort,
                 authUtils,
                 usuariosClient,
-                trazabilidadClient,
-                mensajeriaClient,
-                pinGenerator,
                 authHeaderProvider);
     }
 
