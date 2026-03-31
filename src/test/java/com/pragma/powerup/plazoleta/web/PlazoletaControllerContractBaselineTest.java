@@ -1,5 +1,7 @@
 package com.pragma.powerup.plazoleta.web;
 
+import com.pragma.powerup.plazoleta.infrastructure.input.rest.PlazoletaController;
+
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
