@@ -1,4 +1,4 @@
-package com.pragma.powerup.plazoleta.security;
+package com.pragma.powerup.plazoleta.infrastructure.security;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;

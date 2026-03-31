@@ -1,4 +1,4 @@
-package com.pragma.powerup.plazoleta.security;
+package com.pragma.powerup.plazoleta.infrastructure.security;
 
 public enum Rol {
     ADMINISTRADOR,
