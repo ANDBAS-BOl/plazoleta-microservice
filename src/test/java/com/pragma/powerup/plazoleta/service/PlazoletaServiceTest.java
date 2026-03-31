@@ -1,10 +1,11 @@
 package com.pragma.powerup.plazoleta.service;
 
-import com.pragma.powerup.plazoleta.client.AuthHeaderProvider;
 import com.pragma.powerup.plazoleta.client.MensajeriaClient;
 import com.pragma.powerup.plazoleta.client.TrazabilidadClient;
 import com.pragma.powerup.plazoleta.client.UsuariosClient;
 import com.pragma.powerup.plazoleta.domain.api.CatalogUseCasePort;
+import com.pragma.powerup.plazoleta.domain.api.OrderEfficiencyUseCasePort;
+import com.pragma.powerup.plazoleta.domain.api.OrderTraceQueryUseCasePort;
 import com.pragma.powerup.plazoleta.domain.api.OrderUseCasePort;
 import com.pragma.powerup.plazoleta.domain.EstadoPedido;
 import com.pragma.powerup.plazoleta.domain.OrderEntity;
@@ -52,7 +53,8 @@ class PlazoletaServiceTest {
     private TrazabilidadClient trazabilidadClient;
     private MensajeriaClient mensajeriaClient;
     private PinGenerator pinGenerator;
-    private AuthHeaderProvider authHeaderProvider;
+    private OrderTraceQueryUseCasePort orderTraceQueryUseCasePort;
+    private OrderEfficiencyUseCasePort orderEfficiencyUseCasePort;
     private OrderUseCasePort orderUseCasePort;
     private PlazoletaService service;
 
@@ -68,7 +70,8 @@ class PlazoletaServiceTest {
         trazabilidadClient = mock(TrazabilidadClient.class);
         mensajeriaClient = mock(MensajeriaClient.class);
         pinGenerator = mock(PinGenerator.class);
-        authHeaderProvider = mock(AuthHeaderProvider.class);
+        orderTraceQueryUseCasePort = mock(OrderTraceQueryUseCasePort.class);
+        orderEfficiencyUseCasePort = mock(OrderEfficiencyUseCasePort.class);
         orderUseCasePort = new OrderUseCase(
                 new OrderJpaAdapter(
                         restaurantRepository,
@@ -85,9 +88,10 @@ class PlazoletaServiceTest {
                 employeeRestaurantRepository,
                 catalogUseCasePort,
                 orderUseCasePort,
+                orderTraceQueryUseCasePort,
+                orderEfficiencyUseCasePort,
                 authUtils,
-                usuariosClient,
-                authHeaderProvider);
+                usuariosClient);
     }
 
     @Test

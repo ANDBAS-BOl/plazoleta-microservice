@@ -2,22 +2,30 @@ package com.pragma.powerup.plazoleta.infrastructure.configuration;
 
 import com.pragma.powerup.plazoleta.client.UsuariosClient;
 import com.pragma.powerup.plazoleta.domain.api.CatalogUseCasePort;
+import com.pragma.powerup.plazoleta.domain.api.OrderEfficiencyUseCasePort;
+import com.pragma.powerup.plazoleta.domain.api.OrderTraceQueryUseCasePort;
 import com.pragma.powerup.plazoleta.domain.api.OrderUseCasePort;
 import com.pragma.powerup.plazoleta.domain.api.PlazoletaUseCasePort;
 import com.pragma.powerup.plazoleta.domain.spi.CatalogPersistencePort;
 import com.pragma.powerup.plazoleta.domain.spi.OrderMessagingPort;
+import com.pragma.powerup.plazoleta.domain.spi.OrderEfficiencyPort;
 import com.pragma.powerup.plazoleta.domain.spi.OrderPersistencePort;
 import com.pragma.powerup.plazoleta.domain.spi.OrderPinGeneratorPort;
+import com.pragma.powerup.plazoleta.domain.spi.OrderTraceQueryPort;
 import com.pragma.powerup.plazoleta.domain.spi.OrderTraceabilityPort;
 import com.pragma.powerup.plazoleta.domain.spi.PlazoletaPersistencePort;
 import com.pragma.powerup.plazoleta.domain.spi.UsuariosValidationPort;
 import com.pragma.powerup.plazoleta.domain.usecase.CatalogUseCase;
+import com.pragma.powerup.plazoleta.domain.usecase.OrderEfficiencyUseCase;
+import com.pragma.powerup.plazoleta.domain.usecase.OrderTraceQueryUseCase;
 import com.pragma.powerup.plazoleta.domain.usecase.OrderUseCase;
 import com.pragma.powerup.plazoleta.domain.usecase.PlazoletaUseCase;
 import com.pragma.powerup.plazoleta.infrastructure.out.http.adapter.OrderMessagingAdapter;
+import com.pragma.powerup.plazoleta.infrastructure.out.http.adapter.OrderTraceQueryAdapter;
 import com.pragma.powerup.plazoleta.infrastructure.out.http.adapter.OrderTraceabilityAdapter;
 import com.pragma.powerup.plazoleta.infrastructure.out.http.adapter.UsuariosValidationAdapter;
 import com.pragma.powerup.plazoleta.infrastructure.out.jpa.adapter.CatalogJpaAdapter;
+import com.pragma.powerup.plazoleta.infrastructure.out.jpa.adapter.OrderEfficiencyJpaAdapter;
 import com.pragma.powerup.plazoleta.infrastructure.out.jpa.adapter.OrderJpaAdapter;
 import com.pragma.powerup.plazoleta.client.MensajeriaClient;
 import com.pragma.powerup.plazoleta.client.TrazabilidadClient;
@@ -79,6 +87,16 @@ public class PlazoletaHexagonalBeanConfiguration {
     }
 
     @Bean
+    public OrderTraceQueryPort orderTraceQueryPort(TrazabilidadClient trazabilidadClient) {
+        return new OrderTraceQueryAdapter(trazabilidadClient);
+    }
+
+    @Bean
+    public OrderTraceQueryUseCasePort orderTraceQueryUseCasePort(OrderTraceQueryPort orderTraceQueryPort) {
+        return new OrderTraceQueryUseCase(orderTraceQueryPort);
+    }
+
+    @Bean
     public OrderMessagingPort orderMessagingPort(MensajeriaClient mensajeriaClient) {
         return new OrderMessagingAdapter(mensajeriaClient);
     }
@@ -86,6 +104,17 @@ public class PlazoletaHexagonalBeanConfiguration {
     @Bean
     public OrderPinGeneratorPort orderPinGeneratorPort(PinGenerator pinGenerator) {
         return pinGenerator::generarPin6Digitos;
+    }
+
+    @Bean
+    public OrderEfficiencyPort orderEfficiencyPort(RestaurantRepository restaurantRepository,
+                                                   OrderRepository orderRepository) {
+        return new OrderEfficiencyJpaAdapter(restaurantRepository, orderRepository);
+    }
+
+    @Bean
+    public OrderEfficiencyUseCasePort orderEfficiencyUseCasePort(OrderEfficiencyPort orderEfficiencyPort) {
+        return new OrderEfficiencyUseCase(orderEfficiencyPort);
     }
 
     @Bean

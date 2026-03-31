@@ -1,12 +1,14 @@
 package com.pragma.powerup.plazoleta.service;
 
-import com.pragma.powerup.plazoleta.client.AuthHeaderProvider;
 import com.pragma.powerup.plazoleta.client.UsuariosClient;
 import com.pragma.powerup.plazoleta.domain.api.CatalogUseCasePort;
+import com.pragma.powerup.plazoleta.domain.api.OrderEfficiencyUseCasePort;
+import com.pragma.powerup.plazoleta.domain.api.OrderTraceQueryUseCasePort;
 import com.pragma.powerup.plazoleta.domain.api.OrderUseCasePort;
 import com.pragma.powerup.plazoleta.domain.*;
 import com.pragma.powerup.plazoleta.domain.model.EstadoPedidoModel;
 import com.pragma.powerup.plazoleta.domain.model.DishModel;
+import com.pragma.powerup.plazoleta.domain.model.OrderEfficiencyModel;
 import com.pragma.powerup.plazoleta.domain.model.OrderItemModel;
 import com.pragma.powerup.plazoleta.domain.model.OrderModel;
 import com.pragma.powerup.plazoleta.domain.model.RestaurantModel;
@@ -18,17 +20,13 @@ import com.pragma.powerup.plazoleta.security.AuthUtils;
 import com.pragma.powerup.plazoleta.security.Rol;
 import com.pragma.powerup.plazoleta.web.dto.*;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.time.Duration;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -42,12 +40,10 @@ public class PlazoletaService {
     private final EmployeeRestaurantRepository employeeRestaurantRepository;
     private final CatalogUseCasePort catalogUseCasePort;
     private final OrderUseCasePort orderUseCasePort;
+    private final OrderTraceQueryUseCasePort orderTraceQueryUseCasePort;
+    private final OrderEfficiencyUseCasePort orderEfficiencyUseCasePort;
     private final AuthUtils authUtils;
     private final UsuariosClient usuariosClient;
-    private final AuthHeaderProvider authHeaderProvider;
-
-    @Value("${microservices.trazabilidad.url}")
-    private String trazabilidadBaseUrl;
 
     @Transactional
     public Long createRestaurant(CreateRestaurantRequest request) {
@@ -174,43 +170,18 @@ public class PlazoletaService {
     }
 
     public Object getTrace(Long idOrder) {
-        Long clientId = requireRole(Rol.CLIENTE);
-        String url = trazabilidadBaseUrl + "/api/v1/trazabilidad/pedidos/" + idOrder;
-        WebClient.RequestHeadersSpec<?> spec = WebClient.create(url).get();
-        authHeaderProvider.getAuthorizationHeader()
-                .ifPresent(token -> spec.header(HttpHeaders.AUTHORIZATION, token));
-
-        return spec
-                .retrieve()
-                .bodyToMono(Object.class)
-                .block();
+        requireRole(Rol.CLIENTE);
+        return orderTraceQueryUseCasePort.getTraceByOrderId(idOrder);
     }
 
     public EficienciaResponse getEfficiency() {
         Long ownerId = requireRole(Rol.PROPIETARIO);
-        List<Long> restaurantIds = restaurantRepository.findAll().stream()
-                .filter(r -> r.getIdPropietario().equals(ownerId))
-                .map(RestaurantEntity::getId)
-                .collect(Collectors.toList());
-        if (restaurantIds.isEmpty()) {
-            return new EficienciaResponse(List.of());
-        }
-        List<OrderEntity> delivered = orderRepository.findByRestaurantIdInAndEstado(restaurantIds, EstadoPedido.ENTREGADO);
-        Map<Long, List<Long>> minutesByEmployee = new HashMap<>();
-        for (OrderEntity order : delivered) {
-            if (order.getIdEmpleadoAsignado() == null || order.getFechaEntrega() == null) {
-                continue;
-            }
-            long minutes = Duration.between(order.getFechaCreacion(), order.getFechaEntrega()).toMinutes();
-            minutesByEmployee.computeIfAbsent(order.getIdEmpleadoAsignado(), key -> new ArrayList<>()).add(minutes);
-        }
-        List<EficienciaResponse.EficienciaEmpleado> ranking = minutesByEmployee.entrySet().stream()
-                .map(e -> new EficienciaResponse.EficienciaEmpleado(
-                        e.getKey(),
-                        e.getValue().stream().mapToLong(v -> v).average().orElse(0)))
-                .sorted(Comparator.comparing(EficienciaResponse.EficienciaEmpleado::tiempoPromedioMinutos))
-                .collect(Collectors.toList());
-        return new EficienciaResponse(ranking);
+        OrderEfficiencyModel efficiencyModel = orderEfficiencyUseCasePort.getOwnerEfficiency(ownerId);
+        return new EficienciaResponse(
+                efficiencyModel.ranking().stream()
+                        .map(item -> new EficienciaResponse.EficienciaEmpleado(item.idEmpleado(), item.tiempoPromedioMinutos()))
+                        .toList()
+        );
     }
 
     private DishResponse toDishResponse(DishModel d) {

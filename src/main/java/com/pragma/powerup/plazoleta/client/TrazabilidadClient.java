@@ -35,5 +35,17 @@ public class TrazabilidadClient {
                 .toBodilessEntity()
                 .block();
     }
+
+    public Object obtenerTrazabilidadPedido(Long idPedido) {
+        String url = trazabilidadBaseUrl + "/api/v1/trazabilidad/pedidos/" + idPedido;
+        WebClient.RequestHeadersSpec<?> request = WebClient.create(url).get();
+
+        authHeaderProvider.getAuthorizationHeader()
+                .ifPresent(token -> request.header(HttpHeaders.AUTHORIZATION, token));
+
+        return request.retrieve()
+                .bodyToMono(Object.class)
+                .block();
+    }
 }
 

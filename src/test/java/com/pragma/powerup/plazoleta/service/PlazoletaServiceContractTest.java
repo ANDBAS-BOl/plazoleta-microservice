@@ -6,6 +6,8 @@ import com.pragma.powerup.plazoleta.client.AuthHeaderProvider;
 import com.pragma.powerup.plazoleta.client.MensajeriaClient;
 import com.pragma.powerup.plazoleta.client.TrazabilidadClient;
 import com.pragma.powerup.plazoleta.domain.api.CatalogUseCasePort;
+import com.pragma.powerup.plazoleta.domain.api.OrderEfficiencyUseCasePort;
+import com.pragma.powerup.plazoleta.domain.api.OrderTraceQueryUseCasePort;
 import com.pragma.powerup.plazoleta.domain.api.OrderUseCasePort;
 import com.pragma.powerup.plazoleta.domain.EstadoPedido;
 import com.pragma.powerup.plazoleta.domain.OrderEntity;
@@ -13,6 +15,7 @@ import com.pragma.powerup.plazoleta.domain.RestaurantEntity;
 import com.pragma.powerup.plazoleta.domain.usecase.CatalogUseCase;
 import com.pragma.powerup.plazoleta.domain.usecase.OrderUseCase;
 import com.pragma.powerup.plazoleta.infrastructure.out.http.adapter.OrderMessagingAdapter;
+import com.pragma.powerup.plazoleta.infrastructure.out.http.adapter.OrderTraceQueryAdapter;
 import com.pragma.powerup.plazoleta.infrastructure.out.http.adapter.OrderTraceabilityAdapter;
 import com.pragma.powerup.plazoleta.infrastructure.out.http.adapter.UsuariosValidationAdapter;
 import com.pragma.powerup.plazoleta.infrastructure.out.jpa.adapter.CatalogJpaAdapter;
@@ -62,6 +65,8 @@ class PlazoletaServiceContractTest {
     private PinGenerator pinGenerator;
     private AuthHeaderProvider authHeaderProvider;
     private OrderUseCasePort orderUseCasePort;
+    private OrderTraceQueryUseCasePort orderTraceQueryUseCasePort;
+    private OrderEfficiencyUseCasePort orderEfficiencyUseCasePort;
 
     private PlazoletaService service;
 
@@ -97,6 +102,8 @@ class PlazoletaServiceContractTest {
                 new OrderMessagingAdapter(mensajeriaClient),
                 pinGenerator::generarPin6Digitos
         );
+        orderTraceQueryUseCasePort = idOrder -> new OrderTraceQueryAdapter(trazabilidadClient).getTraceByOrderId(idOrder);
+        orderEfficiencyUseCasePort = ownerId -> new com.pragma.powerup.plazoleta.domain.model.OrderEfficiencyModel(java.util.List.of());
 
         service = new PlazoletaService(
                 restaurantRepository,
@@ -105,18 +112,11 @@ class PlazoletaServiceContractTest {
                 employeeRestaurantRepository,
                 catalogUseCasePort,
                 orderUseCasePort,
+                orderTraceQueryUseCasePort,
+                orderEfficiencyUseCasePort,
                 authUtils,
-                usuariosClient,
-                authHeaderProvider
+                usuariosClient
         );
-
-        try {
-            var field = PlazoletaService.class.getDeclaredField("trazabilidadBaseUrl");
-            field.setAccessible(true);
-            field.set(service, baseUrl);
-        } catch (ReflectiveOperationException e) {
-            throw new RuntimeException("No fue posible inicializar trazabilidadBaseUrl para pruebas", e);
-        }
     }
 
     @AfterEach
@@ -286,9 +286,10 @@ class PlazoletaServiceContractTest {
                         new UsuariosValidationAdapter(realUsuariosClient)
                 ),
                 orderUseCasePort,
+                orderTraceQueryUseCasePort,
+                orderEfficiencyUseCasePort,
                 authUtils,
-                realUsuariosClient,
-                authHeaderProvider
+                realUsuariosClient
         );
 
         Long id = localService.createRestaurant(new CreateRestaurantRequest(
