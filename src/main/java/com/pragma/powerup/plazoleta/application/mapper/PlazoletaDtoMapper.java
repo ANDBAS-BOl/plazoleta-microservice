@@ -1,18 +1,18 @@
 package com.pragma.powerup.plazoleta.application.mapper;
 
+import com.pragma.powerup.plazoleta.application.dto.request.CreateDishRequest;
+import com.pragma.powerup.plazoleta.application.dto.request.CreateOrderRequest;
+import com.pragma.powerup.plazoleta.application.dto.request.CreateRestaurantRequest;
+import com.pragma.powerup.plazoleta.application.dto.request.UpdateDishRequest;
+import com.pragma.powerup.plazoleta.application.dto.response.DishResponse;
+import com.pragma.powerup.plazoleta.application.dto.response.EficienciaResponse;
+import com.pragma.powerup.plazoleta.application.dto.response.OrderResponse;
+import com.pragma.powerup.plazoleta.application.dto.response.RestaurantCardResponse;
 import com.pragma.powerup.plazoleta.domain.model.DishModel;
 import com.pragma.powerup.plazoleta.domain.model.OrderEfficiencyModel;
 import com.pragma.powerup.plazoleta.domain.model.OrderItemModel;
 import com.pragma.powerup.plazoleta.domain.model.OrderModel;
 import com.pragma.powerup.plazoleta.domain.model.RestaurantModel;
-import com.pragma.powerup.plazoleta.web.dto.CreateDishRequest;
-import com.pragma.powerup.plazoleta.web.dto.CreateOrderRequest;
-import com.pragma.powerup.plazoleta.web.dto.CreateRestaurantRequest;
-import com.pragma.powerup.plazoleta.web.dto.DishResponse;
-import com.pragma.powerup.plazoleta.web.dto.EficienciaResponse;
-import com.pragma.powerup.plazoleta.web.dto.OrderResponse;
-import com.pragma.powerup.plazoleta.web.dto.RestaurantCardResponse;
-import com.pragma.powerup.plazoleta.web.dto.UpdateDishRequest;
 
 import java.util.List;
 import java.util.stream.Collectors;

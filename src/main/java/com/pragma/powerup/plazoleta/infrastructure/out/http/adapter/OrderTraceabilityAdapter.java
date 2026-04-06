@@ -1,6 +1,6 @@
 package com.pragma.powerup.plazoleta.infrastructure.out.http.adapter;
 
-import com.pragma.powerup.plazoleta.client.TrazabilidadClient;
+import com.pragma.powerup.plazoleta.infrastructure.out.http.client.TrazabilidadClient;
 import com.pragma.powerup.plazoleta.domain.model.EstadoPedidoModel;
 import com.pragma.powerup.plazoleta.domain.model.OrderModel;
 import com.pragma.powerup.plazoleta.domain.spi.OrderTraceabilityPort;

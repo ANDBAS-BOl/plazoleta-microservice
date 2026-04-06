@@ -1,6 +1,8 @@
 package com.pragma.powerup.plazoleta.architecture;
 
-import com.pragma.powerup.plazoleta.application.handler.impl.PlazoletaHandler;
+import com.pragma.powerup.plazoleta.application.dto.request.CreateRestaurantRequest;
+import com.pragma.powerup.plazoleta.application.handler.impl.CatalogHandler;
+import com.pragma.powerup.plazoleta.application.handler.impl.OrderHandler;
 import com.pragma.powerup.plazoleta.domain.api.CatalogUseCasePort;
 import com.pragma.powerup.plazoleta.domain.api.OrderEfficiencyUseCasePort;
 import com.pragma.powerup.plazoleta.domain.api.OrderTraceQueryUseCasePort;
@@ -8,13 +10,6 @@ import com.pragma.powerup.plazoleta.domain.api.OrderUseCasePort;
 import com.pragma.powerup.plazoleta.domain.model.EstadoPedidoModel;
 import com.pragma.powerup.plazoleta.domain.model.OrderItemModel;
 import com.pragma.powerup.plazoleta.domain.model.OrderModel;
-import com.pragma.powerup.plazoleta.infrastructure.security.AuthUtils;
-import com.pragma.powerup.plazoleta.infrastructure.security.Rol;
-import com.pragma.powerup.plazoleta.infrastructure.security.UsuarioPrincipal;
-import com.pragma.powerup.plazoleta.repository.EmployeeRestaurantRepository;
-import com.pragma.powerup.plazoleta.repository.RestaurantRepository;
-import com.pragma.powerup.plazoleta.client.UsuariosClient;
-import com.pragma.powerup.plazoleta.web.dto.CreateRestaurantRequest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -41,24 +36,18 @@ class PlazoletaHandlerWiringTest {
     private OrderTraceQueryUseCasePort orderTraceQueryUseCasePort;
     @Mock
     private OrderEfficiencyUseCasePort orderEfficiencyUseCasePort;
-    @Mock
-    private RestaurantRepository restaurantRepository;
-    @Mock
-    private EmployeeRestaurantRepository employeeRestaurantRepository;
-    @Mock
-    private UsuariosClient usuariosClient;
-    @Mock
-    private AuthUtils authUtils;
 
     @InjectMocks
-    private PlazoletaHandler handler;
+    private CatalogHandler catalogHandler;
+
+    @InjectMocks
+    private OrderHandler orderHandler;
 
     @Test
     void shouldDelegateRestaurantCreationToCatalogUseCase() {
-        when(authUtils.currentUser()).thenReturn(new UsuarioPrincipal(10L, "admin@test.com", Rol.ADMINISTRADOR));
         when(catalogUseCasePort.createRestaurant(any())).thenReturn(77L);
 
-        Long createdId = handler.createRestaurant(new CreateRestaurantRequest(
+        Long createdId = catalogHandler.createRestaurant(new CreateRestaurantRequest(
                 "Mi Restaurante",
                 "123456",
                 "Calle 1",
@@ -72,7 +61,6 @@ class PlazoletaHandlerWiringTest {
 
     @Test
     void shouldDelegateMarkReadyToOrderUseCaseAndMapResponse() {
-        when(authUtils.currentUser()).thenReturn(new UsuarioPrincipal(20L, "empleado@test.com", Rol.EMPLEADO));
         OrderModel model = OrderModel.builder()
                 .id(200L)
                 .idRestaurante(8L)
@@ -88,7 +76,7 @@ class PlazoletaHandlerWiringTest {
                 .build();
         when(orderUseCasePort.markReady(200L, 20L)).thenReturn(model);
 
-        var response = handler.markReady(200L);
+        var response = orderHandler.markReady(200L, 20L);
 
         assertEquals(200L, response.idPedido());
         assertEquals("LISTO", response.estadoActual());
@@ -97,11 +85,10 @@ class PlazoletaHandlerWiringTest {
 
     @Test
     void shouldDelegateTraceQueryToUseCasePort() {
-        when(authUtils.currentUser()).thenReturn(new UsuarioPrincipal(30L, "cliente@test.com", Rol.CLIENTE));
         Map<String, Object> trace = Map.of("pedidoId", 500L, "eventos", List.of());
         when(orderTraceQueryUseCasePort.getTraceByOrderId(500L)).thenReturn(trace);
 
-        Object result = handler.trace(500L);
+        Object result = orderHandler.trace(500L);
 
         assertEquals(trace, result);
         verify(orderTraceQueryUseCasePort).getTraceByOrderId(500L);

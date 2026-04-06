@@ -1,19 +1,21 @@
 package com.pragma.powerup.plazoleta.domain.usecase;
 
 import com.pragma.powerup.plazoleta.domain.api.OrderUseCasePort;
+import com.pragma.powerup.plazoleta.domain.exception.AccessDeniedException;
+import com.pragma.powerup.plazoleta.domain.exception.BusinessRuleException;
+import com.pragma.powerup.plazoleta.domain.exception.InternalProcessException;
+import com.pragma.powerup.plazoleta.domain.exception.ResourceNotFoundException;
 import com.pragma.powerup.plazoleta.domain.model.DishModel;
 import com.pragma.powerup.plazoleta.domain.model.EstadoPedidoModel;
 import com.pragma.powerup.plazoleta.domain.model.OrderItemModel;
 import com.pragma.powerup.plazoleta.domain.model.OrderModel;
+import com.pragma.powerup.plazoleta.domain.model.PageResult;
+import com.pragma.powerup.plazoleta.domain.model.PaginationParams;
 import com.pragma.powerup.plazoleta.domain.model.RestaurantModel;
 import com.pragma.powerup.plazoleta.domain.spi.OrderMessagingPort;
 import com.pragma.powerup.plazoleta.domain.spi.OrderPersistencePort;
 import com.pragma.powerup.plazoleta.domain.spi.OrderPinGeneratorPort;
 import com.pragma.powerup.plazoleta.domain.spi.OrderTraceabilityPort;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
-import org.springframework.http.HttpStatus;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -41,22 +43,22 @@ public class OrderUseCase implements OrderUseCasePort {
     @Override
     public OrderModel createOrder(Long clientId, Long restaurantId, String telefonoCliente, List<OrderItemModel> items) {
         if (orderPersistencePort.hasActiveOrder(clientId)) {
-            throw badRequest("Ya tienes un pedido en proceso");
+            throw new BusinessRuleException("Ya tienes un pedido en proceso");
         }
         if (items == null || items.isEmpty()) {
-            throw badRequest("El pedido debe contener platos");
+            throw new BusinessRuleException("El pedido debe contener platos");
         }
         RestaurantModel restaurant = orderPersistencePort.findRestaurantById(restaurantId)
-                .orElseThrow(() -> notFound("Restaurante no existe"));
+                .orElseThrow(() -> new ResourceNotFoundException("Restaurante no existe"));
 
         for (OrderItemModel item : items) {
             DishModel dish = orderPersistencePort.findDishById(item.getIdPlato())
-                    .orElseThrow(() -> notFound("Plato no existe"));
+                    .orElseThrow(() -> new ResourceNotFoundException("Plato no existe"));
             if (!Boolean.TRUE.equals(dish.getActivo())) {
-                throw badRequest("No se pueden pedir platos inactivos");
+                throw new BusinessRuleException("No se pueden pedir platos inactivos");
             }
             if (!dish.getIdRestaurante().equals(restaurant.getId())) {
-                throw badRequest("Un pedido debe incluir platos de un solo restaurante");
+                throw new BusinessRuleException("Un pedido debe incluir platos de un solo restaurante");
             }
         }
 
@@ -75,28 +77,28 @@ public class OrderUseCase implements OrderUseCasePort {
     }
 
     @Override
-    public Page<OrderModel> listOrdersByStatus(Long employeeId, EstadoPedidoModel estado, Pageable pageable) {
+    public PageResult<OrderModel> listOrdersByStatus(Long employeeId, EstadoPedidoModel estado, PaginationParams pagination) {
         Long restaurantId = orderPersistencePort.findRestaurantIdByEmployee(employeeId)
-                .orElseThrow(() -> forbidden("El empleado no esta asignado a un restaurante"));
-        return orderPersistencePort.listOrdersByStatus(restaurantId, estado, pageable);
+                .orElseThrow(() -> new AccessDeniedException("El empleado no esta asignado a un restaurante"));
+        return orderPersistencePort.listOrdersByStatus(restaurantId, estado, pagination);
     }
 
     @Override
     public OrderModel takeOrder(Long idOrder, Long employeeId) {
         OrderModel order = orderPersistencePort.findOrderById(idOrder)
-                .orElseThrow(() -> notFound("Pedido no existe"));
+                .orElseThrow(() -> new ResourceNotFoundException("Pedido no existe"));
         Long employeeRestaurantId = orderPersistencePort.findRestaurantIdByEmployee(employeeId)
-                .orElseThrow(() -> forbidden("El empleado no esta asignado a un restaurante"));
+                .orElseThrow(() -> new AccessDeniedException("El empleado no esta asignado a un restaurante"));
 
         if (!employeeRestaurantId.equals(order.getIdRestaurante())) {
-            throw forbidden("Solo puedes tomar pedidos de tu restaurante");
+            throw new AccessDeniedException("Solo puedes tomar pedidos de tu restaurante");
         }
         int updated = orderPersistencePort.takeOrderIfPending(idOrder, employeeId);
         if (updated == 0) {
-            throw badRequest("El pedido ya fue asignado o no esta pendiente");
+            throw new BusinessRuleException("El pedido ya fue asignado o no esta pendiente");
         }
         OrderModel current = orderPersistencePort.findOrderById(idOrder)
-                .orElseThrow(() -> notFound("Pedido no existe"));
+                .orElseThrow(() -> new ResourceNotFoundException("Pedido no existe"));
         orderTraceabilityPort.registerTransition(current, EstadoPedidoModel.PENDIENTE, EstadoPedidoModel.EN_PREPARACION);
         return current;
     }
@@ -104,16 +106,15 @@ public class OrderUseCase implements OrderUseCasePort {
     @Override
     public OrderModel markReady(Long idOrder, Long employeeId) {
         OrderModel order = orderPersistencePort.findOrderById(idOrder)
-                .orElseThrow(() -> notFound("Pedido no existe"));
+                .orElseThrow(() -> new ResourceNotFoundException("Pedido no existe"));
         if (!employeeId.equals(order.getIdEmpleadoAsignado())) {
-            throw forbidden("Solo el empleado asignado puede marcar LISTO");
+            throw new AccessDeniedException("Solo el empleado asignado puede marcar LISTO");
         }
         if (order.getEstado() != EstadoPedidoModel.EN_PREPARACION) {
-            throw badRequest("Solo pedidos EN_PREPARACION pueden pasar a LISTO");
+            throw new BusinessRuleException("Solo pedidos EN_PREPARACION pueden pasar a LISTO");
         }
 
         String pin = generateUniquePin();
-        // Regla HU 14: si Mensajería falla, el pedido NO debe quedar en LISTO.
         orderMessagingPort.sendOrderReadyPin(order.getTelefonoCliente(), pin);
 
         OrderModel updated = OrderModel.builder()
@@ -136,15 +137,15 @@ public class OrderUseCase implements OrderUseCasePort {
     @Override
     public OrderModel deliverOrder(Long idOrder, Long employeeId, String pin) {
         OrderModel order = orderPersistencePort.findOrderById(idOrder)
-                .orElseThrow(() -> notFound("Pedido no existe"));
+                .orElseThrow(() -> new ResourceNotFoundException("Pedido no existe"));
         if (!employeeId.equals(order.getIdEmpleadoAsignado())) {
-            throw forbidden("Solo el empleado asignado puede entregar");
+            throw new AccessDeniedException("Solo el empleado asignado puede entregar");
         }
         if (order.getEstado() != EstadoPedidoModel.LISTO) {
-            throw badRequest("Solo pedidos LISTO pueden pasar a ENTREGADO");
+            throw new BusinessRuleException("Solo pedidos LISTO pueden pasar a ENTREGADO");
         }
         if (!Objects.equals(order.getPinSeguridad(), pin)) {
-            throw badRequest("PIN invalido");
+            throw new BusinessRuleException("PIN invalido");
         }
 
         OrderModel updated = OrderModel.builder()
@@ -167,12 +168,12 @@ public class OrderUseCase implements OrderUseCasePort {
     @Override
     public OrderModel cancelOrder(Long idOrder, Long clientId) {
         OrderModel order = orderPersistencePort.findOrderById(idOrder)
-                .orElseThrow(() -> notFound("Pedido no existe"));
+                .orElseThrow(() -> new ResourceNotFoundException("Pedido no existe"));
         if (!order.getIdCliente().equals(clientId)) {
-            throw forbidden("No puedes cancelar pedidos de otro cliente");
+            throw new AccessDeniedException("No puedes cancelar pedidos de otro cliente");
         }
         if (order.getEstado() != EstadoPedidoModel.PENDIENTE) {
-            throw badRequest("Lo sentimos, tu pedido ya esta en preparacion y no puede cancelarse");
+            throw new BusinessRuleException("Lo sentimos, tu pedido ya esta en preparacion y no puede cancelarse");
         }
 
         OrderModel updated = OrderModel.builder()
@@ -199,18 +200,6 @@ public class OrderUseCase implements OrderUseCasePort {
                 return pin;
             }
         }
-        throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "No se pudo generar un PIN único");
-    }
-
-    private ResponseStatusException badRequest(String msg) {
-        return new ResponseStatusException(HttpStatus.BAD_REQUEST, msg);
-    }
-
-    private ResponseStatusException forbidden(String msg) {
-        return new ResponseStatusException(HttpStatus.FORBIDDEN, msg);
-    }
-
-    private ResponseStatusException notFound(String msg) {
-        return new ResponseStatusException(HttpStatus.NOT_FOUND, msg);
+        throw new InternalProcessException("No se pudo generar un PIN unico");
     }
 }

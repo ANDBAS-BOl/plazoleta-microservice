@@ -1,13 +1,13 @@
 package com.pragma.powerup.plazoleta.infrastructure.out.jpa.adapter;
 
-import com.pragma.powerup.plazoleta.domain.EstadoPedido;
-import com.pragma.powerup.plazoleta.domain.OrderEntity;
-import com.pragma.powerup.plazoleta.domain.RestaurantEntity;
 import com.pragma.powerup.plazoleta.domain.model.OrderEfficiencyEmployeeModel;
 import com.pragma.powerup.plazoleta.domain.model.OrderEfficiencyModel;
 import com.pragma.powerup.plazoleta.domain.spi.OrderEfficiencyPort;
-import com.pragma.powerup.plazoleta.repository.OrderRepository;
-import com.pragma.powerup.plazoleta.repository.RestaurantRepository;
+import com.pragma.powerup.plazoleta.infrastructure.out.jpa.entity.EstadoPedido;
+import com.pragma.powerup.plazoleta.infrastructure.out.jpa.entity.OrderEntity;
+import com.pragma.powerup.plazoleta.infrastructure.out.jpa.entity.RestaurantEntity;
+import com.pragma.powerup.plazoleta.infrastructure.out.jpa.repository.OrderRepository;
+import com.pragma.powerup.plazoleta.infrastructure.out.jpa.repository.RestaurantRepository;
 
 import java.time.Duration;
 import java.util.ArrayList;

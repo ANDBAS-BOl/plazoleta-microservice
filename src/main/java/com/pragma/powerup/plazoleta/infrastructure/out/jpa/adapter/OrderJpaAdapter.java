@@ -1,18 +1,24 @@
 package com.pragma.powerup.plazoleta.infrastructure.out.jpa.adapter;
 
-import com.pragma.powerup.plazoleta.domain.*;
 import com.pragma.powerup.plazoleta.domain.model.DishModel;
 import com.pragma.powerup.plazoleta.domain.model.EstadoPedidoModel;
 import com.pragma.powerup.plazoleta.domain.model.OrderItemModel;
 import com.pragma.powerup.plazoleta.domain.model.OrderModel;
+import com.pragma.powerup.plazoleta.domain.model.PageResult;
+import com.pragma.powerup.plazoleta.domain.model.PaginationParams;
 import com.pragma.powerup.plazoleta.domain.model.RestaurantModel;
 import com.pragma.powerup.plazoleta.domain.spi.OrderPersistencePort;
-import com.pragma.powerup.plazoleta.repository.DishRepository;
-import com.pragma.powerup.plazoleta.repository.EmployeeRestaurantRepository;
-import com.pragma.powerup.plazoleta.repository.OrderRepository;
-import com.pragma.powerup.plazoleta.repository.RestaurantRepository;
+import com.pragma.powerup.plazoleta.infrastructure.out.jpa.entity.DishEntity;
+import com.pragma.powerup.plazoleta.infrastructure.out.jpa.entity.EstadoPedido;
+import com.pragma.powerup.plazoleta.infrastructure.out.jpa.entity.OrderEntity;
+import com.pragma.powerup.plazoleta.infrastructure.out.jpa.entity.OrderItemEntity;
+import com.pragma.powerup.plazoleta.infrastructure.out.jpa.entity.RestaurantEntity;
+import com.pragma.powerup.plazoleta.infrastructure.out.jpa.repository.DishRepository;
+import com.pragma.powerup.plazoleta.infrastructure.out.jpa.repository.EmployeeRestaurantRepository;
+import com.pragma.powerup.plazoleta.infrastructure.out.jpa.repository.OrderRepository;
+import com.pragma.powerup.plazoleta.infrastructure.out.jpa.repository.RestaurantRepository;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.PageRequest;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -96,9 +102,12 @@ public class OrderJpaAdapter implements OrderPersistencePort {
     }
 
     @Override
-    public Page<OrderModel> listOrdersByStatus(Long idRestaurante, EstadoPedidoModel estado, Pageable pageable) {
-        return orderRepository.findByRestaurantIdAndEstado(idRestaurante, toEstadoEntity(estado), pageable)
-                .map(this::toOrderModel);
+    public PageResult<OrderModel> listOrdersByStatus(Long idRestaurante, EstadoPedidoModel estado, PaginationParams pagination) {
+        Page<OrderEntity> page = orderRepository.findByRestaurantIdAndEstado(
+                idRestaurante,
+                toEstadoEntity(estado),
+                PageRequest.of(pagination.page(), pagination.size()));
+        return toPageResult(page);
     }
 
     @Override
@@ -124,6 +133,18 @@ public class OrderJpaAdapter implements OrderPersistencePort {
     @Override
     public boolean existsPinSeguridad(String pin) {
         return orderRepository.existsByPinSeguridad(pin);
+    }
+
+    private PageResult<OrderModel> toPageResult(Page<OrderEntity> page) {
+        List<OrderModel> content = page.getContent().stream()
+                .map(this::toOrderModel)
+                .collect(Collectors.toList());
+        return new PageResult<>(
+                content,
+                page.getNumber(),
+                page.getSize(),
+                page.getTotalElements(),
+                page.getTotalPages());
     }
 
     private EstadoPedido toEstadoEntity(EstadoPedidoModel model) {

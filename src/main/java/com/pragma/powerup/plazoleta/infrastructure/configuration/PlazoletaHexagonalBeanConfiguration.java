@@ -1,39 +1,36 @@
 package com.pragma.powerup.plazoleta.infrastructure.configuration;
 
-import com.pragma.powerup.plazoleta.client.UsuariosClient;
 import com.pragma.powerup.plazoleta.domain.api.CatalogUseCasePort;
 import com.pragma.powerup.plazoleta.domain.api.OrderEfficiencyUseCasePort;
 import com.pragma.powerup.plazoleta.domain.api.OrderTraceQueryUseCasePort;
 import com.pragma.powerup.plazoleta.domain.api.OrderUseCasePort;
-import com.pragma.powerup.plazoleta.domain.api.PlazoletaUseCasePort;
 import com.pragma.powerup.plazoleta.domain.spi.CatalogPersistencePort;
-import com.pragma.powerup.plazoleta.domain.spi.OrderMessagingPort;
 import com.pragma.powerup.plazoleta.domain.spi.OrderEfficiencyPort;
+import com.pragma.powerup.plazoleta.domain.spi.OrderMessagingPort;
 import com.pragma.powerup.plazoleta.domain.spi.OrderPersistencePort;
 import com.pragma.powerup.plazoleta.domain.spi.OrderPinGeneratorPort;
 import com.pragma.powerup.plazoleta.domain.spi.OrderTraceQueryPort;
 import com.pragma.powerup.plazoleta.domain.spi.OrderTraceabilityPort;
-import com.pragma.powerup.plazoleta.domain.spi.PlazoletaPersistencePort;
 import com.pragma.powerup.plazoleta.domain.spi.UsuariosValidationPort;
 import com.pragma.powerup.plazoleta.domain.usecase.CatalogUseCase;
 import com.pragma.powerup.plazoleta.domain.usecase.OrderEfficiencyUseCase;
 import com.pragma.powerup.plazoleta.domain.usecase.OrderTraceQueryUseCase;
 import com.pragma.powerup.plazoleta.domain.usecase.OrderUseCase;
-import com.pragma.powerup.plazoleta.domain.usecase.PlazoletaUseCase;
 import com.pragma.powerup.plazoleta.infrastructure.out.http.adapter.OrderMessagingAdapter;
 import com.pragma.powerup.plazoleta.infrastructure.out.http.adapter.OrderTraceQueryAdapter;
 import com.pragma.powerup.plazoleta.infrastructure.out.http.adapter.OrderTraceabilityAdapter;
 import com.pragma.powerup.plazoleta.infrastructure.out.http.adapter.UsuariosValidationAdapter;
+import com.pragma.powerup.plazoleta.infrastructure.out.http.client.MensajeriaClient;
+import com.pragma.powerup.plazoleta.infrastructure.out.http.client.TrazabilidadClient;
+import com.pragma.powerup.plazoleta.infrastructure.out.http.client.UsuariosClient;
 import com.pragma.powerup.plazoleta.infrastructure.out.jpa.adapter.CatalogJpaAdapter;
 import com.pragma.powerup.plazoleta.infrastructure.out.jpa.adapter.OrderEfficiencyJpaAdapter;
 import com.pragma.powerup.plazoleta.infrastructure.out.jpa.adapter.OrderJpaAdapter;
-import com.pragma.powerup.plazoleta.client.MensajeriaClient;
-import com.pragma.powerup.plazoleta.client.TrazabilidadClient;
-import com.pragma.powerup.plazoleta.repository.DishRepository;
-import com.pragma.powerup.plazoleta.repository.EmployeeRestaurantRepository;
-import com.pragma.powerup.plazoleta.repository.OrderRepository;
-import com.pragma.powerup.plazoleta.repository.RestaurantRepository;
-import com.pragma.powerup.plazoleta.service.pin.PinGenerator;
+import com.pragma.powerup.plazoleta.infrastructure.out.jpa.repository.DishRepository;
+import com.pragma.powerup.plazoleta.infrastructure.out.jpa.repository.EmployeeRestaurantRepository;
+import com.pragma.powerup.plazoleta.infrastructure.out.jpa.repository.OrderRepository;
+import com.pragma.powerup.plazoleta.infrastructure.out.jpa.repository.RestaurantRepository;
+import com.pragma.powerup.plazoleta.infrastructure.out.pin.RandomPinGeneratorAdapter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -41,21 +38,10 @@ import org.springframework.context.annotation.Configuration;
 public class PlazoletaHexagonalBeanConfiguration {
 
     @Bean
-    public PlazoletaPersistencePort plazoletaPersistencePort() {
-        return () -> {
-            // Placeholder adapter for phase 1 scaffolding.
-        };
-    }
-
-    @Bean
-    public PlazoletaUseCasePort plazoletaUseCasePort(PlazoletaPersistencePort plazoletaPersistencePort) {
-        return new PlazoletaUseCase(plazoletaPersistencePort);
-    }
-
-    @Bean
     public CatalogPersistencePort catalogPersistencePort(RestaurantRepository restaurantRepository,
-                                                         DishRepository dishRepository) {
-        return new CatalogJpaAdapter(restaurantRepository, dishRepository);
+                                                         DishRepository dishRepository,
+                                                         EmployeeRestaurantRepository employeeRestaurantRepository) {
+        return new CatalogJpaAdapter(restaurantRepository, dishRepository, employeeRestaurantRepository);
     }
 
     @Bean
@@ -102,8 +88,8 @@ public class PlazoletaHexagonalBeanConfiguration {
     }
 
     @Bean
-    public OrderPinGeneratorPort orderPinGeneratorPort(PinGenerator pinGenerator) {
-        return pinGenerator::generarPin6Digitos;
+    public OrderPinGeneratorPort orderPinGeneratorPort() {
+        return new RandomPinGeneratorAdapter();
     }
 
     @Bean

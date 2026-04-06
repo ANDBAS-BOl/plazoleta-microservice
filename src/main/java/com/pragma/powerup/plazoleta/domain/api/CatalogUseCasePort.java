@@ -1,9 +1,9 @@
 package com.pragma.powerup.plazoleta.domain.api;
 
 import com.pragma.powerup.plazoleta.domain.model.DishModel;
+import com.pragma.powerup.plazoleta.domain.model.PageResult;
+import com.pragma.powerup.plazoleta.domain.model.PaginationParams;
 import com.pragma.powerup.plazoleta.domain.model.RestaurantModel;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 
 public interface CatalogUseCasePort {
 
@@ -15,7 +15,9 @@ public interface CatalogUseCasePort {
 
     void setDishActive(Long idDish, Long ownerId, boolean active);
 
-    Page<RestaurantModel> listRestaurants(Pageable pageable);
+    PageResult<RestaurantModel> listRestaurants(PaginationParams pagination);
 
-    Page<DishModel> listDishes(Long restaurantId, String categoria, Pageable pageable);
+    PageResult<DishModel> listDishes(Long restaurantId, String categoria, PaginationParams pagination);
+
+    Long assignEmployeeToRestaurant(Long restaurantId, Long employeeId, Long ownerId);
 }

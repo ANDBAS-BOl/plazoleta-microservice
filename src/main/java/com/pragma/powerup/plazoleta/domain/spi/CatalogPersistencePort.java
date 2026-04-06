@@ -1,9 +1,9 @@
 package com.pragma.powerup.plazoleta.domain.spi;
 
 import com.pragma.powerup.plazoleta.domain.model.DishModel;
+import com.pragma.powerup.plazoleta.domain.model.PageResult;
+import com.pragma.powerup.plazoleta.domain.model.PaginationParams;
 import com.pragma.powerup.plazoleta.domain.model.RestaurantModel;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 
 import java.util.Optional;
 
@@ -19,7 +19,11 @@ public interface CatalogPersistencePort {
 
     void updateDish(DishModel dishModel);
 
-    Page<RestaurantModel> listRestaurants(Pageable pageable);
+    PageResult<RestaurantModel> listRestaurants(PaginationParams pagination);
 
-    Page<DishModel> listActiveDishes(Long restaurantId, String categoria, Pageable pageable);
+    PageResult<DishModel> listActiveDishes(Long restaurantId, String categoria, PaginationParams pagination);
+
+    boolean existsEmployeeAssignment(Long employeeId, Long restaurantId);
+
+    Long saveEmployeeAssignment(Long employeeId, Long restaurantId);
 }

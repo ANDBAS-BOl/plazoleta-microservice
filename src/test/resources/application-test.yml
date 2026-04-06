@@ -1,0 +1,31 @@
+server:
+  port: 0
+
+spring:
+  datasource:
+    url: jdbc:h2:mem:pragma_plazoleta_test;MODE=MYSQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
+  h2:
+    console:
+      enabled: false
+
+security:
+  jwt:
+    secret: "test_jwt_secret_key_at_least_32_characters_long_for_hmac"
+
+microservices:
+  usuarios:
+    url: http://localhost:19081
+  trazabilidad:
+    url: http://localhost:19083
+  mensajeria:
+    url: http://localhost:19084

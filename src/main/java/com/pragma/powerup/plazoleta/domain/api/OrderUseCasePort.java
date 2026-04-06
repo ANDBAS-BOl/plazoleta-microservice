@@ -3,8 +3,8 @@ package com.pragma.powerup.plazoleta.domain.api;
 import com.pragma.powerup.plazoleta.domain.model.EstadoPedidoModel;
 import com.pragma.powerup.plazoleta.domain.model.OrderItemModel;
 import com.pragma.powerup.plazoleta.domain.model.OrderModel;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
+import com.pragma.powerup.plazoleta.domain.model.PageResult;
+import com.pragma.powerup.plazoleta.domain.model.PaginationParams;
 
 import java.util.List;
 
@@ -12,7 +12,7 @@ public interface OrderUseCasePort {
 
     OrderModel createOrder(Long clientId, Long restaurantId, String telefonoCliente, List<OrderItemModel> items);
 
-    Page<OrderModel> listOrdersByStatus(Long employeeId, EstadoPedidoModel estado, Pageable pageable);
+    PageResult<OrderModel> listOrdersByStatus(Long employeeId, EstadoPedidoModel estado, PaginationParams pagination);
 
     OrderModel takeOrder(Long idOrder, Long employeeId);
 
