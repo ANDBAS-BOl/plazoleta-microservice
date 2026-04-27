@@ -67,8 +67,95 @@ dependencies {
 
 tasks.named('test') {
 	useJUnitPlatform()
+	finalizedBy jacocoTestReport
+	testLogging {
+		events "passed", "skipped", "failed"
+		exceptionFormat "full"
+	}
 }
 
-test {
-	finalizedBy jacocoTestReport
+// ============================================================
+// JaCoCo - Cobertura de pruebas
+// ============================================================
+jacoco {
+	toolVersion = "0.8.9"
 }
+
+// Patrones a excluir del cálculo de cobertura:
+// - Clase main (arranque Spring Boot, sin lógica de negocio)
+// - Configuración de infraestructura (wiring de beans, security)
+// - DTOs / Requests / Responses (POJOs sin lógica)
+// - Entidades JPA (anotaciones + getters/setters)
+// - Mappers MapStruct (código generado)
+// - Excepciones simples (extienden RuntimeException)
+def jacocoExclusions = [
+		'**/PlazoletaApplication.*',
+		'**/infrastructure/configuration/**',
+		'**/infrastructure/exceptionhandler/**',
+		'**/infrastructure/security/**',
+		'**/application/dto/**',
+		'**/infrastructure/out/jpa/entity/**',
+		'**/infrastructure/input/rest/dto/**',
+		'**/infrastructure/out/http/dto/**',
+		'**/domain/exception/**',
+		'**/*MapperImpl*'
+]
+
+jacocoTestReport {
+	dependsOn test
+	reports {
+		html.required = true
+		xml.required  = true
+		csv.required  = true
+		html.outputLocation = layout.buildDirectory.dir('reports/jacoco/html')
+		xml.outputLocation  = layout.buildDirectory.file('reports/jacoco/jacoco.xml')
+		csv.outputLocation  = layout.buildDirectory.file('reports/jacoco/jacoco.csv')
+	}
+	classDirectories.setFrom(
+			files(classDirectories.files.collect {
+				fileTree(dir: it, exclude: jacocoExclusions)
+			})
+	)
+}
+
+jacocoTestCoverageVerification {
+	dependsOn test
+	classDirectories.setFrom(
+			files(classDirectories.files.collect {
+				fileTree(dir: it, exclude: jacocoExclusions)
+			})
+	)
+	violationRules {
+		// Línea base global ("no regresión") — eleva en la medida que aumenten los tests
+		rule {
+			element = 'BUNDLE'
+			limit {
+				counter = 'INSTRUCTION'
+				value   = 'COVEREDRATIO'
+				minimum = 0.75
+			}
+			limit {
+				counter = 'BRANCH'
+				value   = 'COVEREDRATIO'
+				minimum = 0.65
+			}
+		}
+		// Núcleo hexagonal (casos de uso del dominio): aquí sí exigimos alta cobertura
+		rule {
+			element = 'PACKAGE'
+			includes = ['com.pragma.powerup.plazoleta.domain.usecase']
+			limit {
+				counter = 'INSTRUCTION'
+				value   = 'COVEREDRATIO'
+				minimum = 0.90
+			}
+			limit {
+				counter = 'BRANCH'
+				value   = 'COVEREDRATIO'
+				minimum = 0.85
+			}
+		}
+	}
+}
+
+check.dependsOn jacocoTestCoverageVerification

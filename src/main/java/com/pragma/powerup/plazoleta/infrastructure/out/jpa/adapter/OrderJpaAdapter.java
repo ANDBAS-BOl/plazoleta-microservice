@@ -13,6 +13,9 @@ import com.pragma.powerup.plazoleta.infrastructure.out.jpa.entity.EstadoPedido;
 import com.pragma.powerup.plazoleta.infrastructure.out.jpa.entity.OrderEntity;
 import com.pragma.powerup.plazoleta.infrastructure.out.jpa.entity.OrderItemEntity;
 import com.pragma.powerup.plazoleta.infrastructure.out.jpa.entity.RestaurantEntity;
+import com.pragma.powerup.plazoleta.infrastructure.out.jpa.mapper.IDishEntityMapper;
+import com.pragma.powerup.plazoleta.infrastructure.out.jpa.mapper.IOrderEntityMapper;
+import com.pragma.powerup.plazoleta.infrastructure.out.jpa.mapper.IRestaurantEntityMapper;
 import com.pragma.powerup.plazoleta.infrastructure.out.jpa.repository.DishRepository;
 import com.pragma.powerup.plazoleta.infrastructure.out.jpa.repository.EmployeeRestaurantRepository;
 import com.pragma.powerup.plazoleta.infrastructure.out.jpa.repository.OrderRepository;
@@ -20,7 +23,6 @@ import com.pragma.powerup.plazoleta.infrastructure.out.jpa.repository.Restaurant
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -31,15 +33,24 @@ public class OrderJpaAdapter implements OrderPersistencePort {
     private final DishRepository dishRepository;
     private final OrderRepository orderRepository;
     private final EmployeeRestaurantRepository employeeRestaurantRepository;
+    private final IRestaurantEntityMapper restaurantEntityMapper;
+    private final IDishEntityMapper dishEntityMapper;
+    private final IOrderEntityMapper orderEntityMapper;
 
     public OrderJpaAdapter(RestaurantRepository restaurantRepository,
                            DishRepository dishRepository,
                            OrderRepository orderRepository,
-                           EmployeeRestaurantRepository employeeRestaurantRepository) {
+                           EmployeeRestaurantRepository employeeRestaurantRepository,
+                           IRestaurantEntityMapper restaurantEntityMapper,
+                           IDishEntityMapper dishEntityMapper,
+                           IOrderEntityMapper orderEntityMapper) {
         this.restaurantRepository = restaurantRepository;
         this.dishRepository = dishRepository;
         this.orderRepository = orderRepository;
         this.employeeRestaurantRepository = employeeRestaurantRepository;
+        this.restaurantEntityMapper = restaurantEntityMapper;
+        this.dishEntityMapper = dishEntityMapper;
+        this.orderEntityMapper = orderEntityMapper;
     }
 
     @Override
@@ -51,12 +62,12 @@ public class OrderJpaAdapter implements OrderPersistencePort {
 
     @Override
     public Optional<RestaurantModel> findRestaurantById(Long idRestaurante) {
-        return restaurantRepository.findById(idRestaurante).map(this::toRestaurantModel);
+        return restaurantRepository.findById(idRestaurante).map(restaurantEntityMapper::toRestaurantModel);
     }
 
     @Override
     public Optional<DishModel> findDishById(Long idPlato) {
-        return dishRepository.findById(idPlato).map(this::toDishModel);
+        return dishRepository.findById(idPlato).map(dishEntityMapper::toDishModel);
     }
 
     @Override
@@ -96,9 +107,9 @@ public class OrderJpaAdapter implements OrderPersistencePort {
         }
 
         if (isNew) {
-            return toOrderModel(orderRepository.save(entity));
+            return orderEntityMapper.toOrderModel(orderRepository.save(entity));
         }
-        return toOrderModel(entity);
+        return orderEntityMapper.toOrderModel(entity);
     }
 
     @Override
@@ -118,7 +129,7 @@ public class OrderJpaAdapter implements OrderPersistencePort {
 
     @Override
     public Optional<OrderModel> findOrderById(Long idOrder) {
-        return orderRepository.findById(idOrder).map(this::toOrderModel);
+        return orderRepository.findById(idOrder).map(orderEntityMapper::toOrderModel);
     }
 
     @Override
@@ -137,7 +148,7 @@ public class OrderJpaAdapter implements OrderPersistencePort {
 
     private PageResult<OrderModel> toPageResult(Page<OrderEntity> page) {
         List<OrderModel> content = page.getContent().stream()
-                .map(this::toOrderModel)
+                .map(orderEntityMapper::toOrderModel)
                 .collect(Collectors.toList());
         return new PageResult<>(
                 content,
@@ -149,59 +160,5 @@ public class OrderJpaAdapter implements OrderPersistencePort {
 
     private EstadoPedido toEstadoEntity(EstadoPedidoModel model) {
         return EstadoPedido.valueOf(model.name());
-    }
-
-    private EstadoPedidoModel toEstadoModel(EstadoPedido estadoPedido) {
-        return EstadoPedidoModel.valueOf(estadoPedido.name());
-    }
-
-    private RestaurantModel toRestaurantModel(RestaurantEntity entity) {
-        return RestaurantModel.builder()
-                .id(entity.getId())
-                .nombre(entity.getNombre())
-                .nit(entity.getNit())
-                .direccion(entity.getDireccion())
-                .telefono(entity.getTelefono())
-                .urlLogo(entity.getUrlLogo())
-                .idPropietario(entity.getIdPropietario())
-                .build();
-    }
-
-    private DishModel toDishModel(DishEntity entity) {
-        return DishModel.builder()
-                .id(entity.getId())
-                .idRestaurante(entity.getRestaurant().getId())
-                .nombre(entity.getNombre())
-                .precio(entity.getPrecio())
-                .descripcion(entity.getDescripcion())
-                .urlImagen(entity.getUrlImagen())
-                .categoria(entity.getCategoria())
-                .activo(entity.getActivo())
-                .build();
-    }
-
-    private OrderModel toOrderModel(OrderEntity entity) {
-        List<OrderItemModel> items = entity.getItems() == null
-                ? new ArrayList<>()
-                : entity.getItems().stream()
-                .map(i -> OrderItemModel.builder()
-                        .idPlato(i.getDish().getId())
-                        .nombrePlato(i.getDish().getNombre())
-                        .cantidad(i.getCantidad())
-                        .build())
-                .collect(Collectors.toList());
-
-        return OrderModel.builder()
-                .id(entity.getId())
-                .idRestaurante(entity.getRestaurant().getId())
-                .idCliente(entity.getIdCliente())
-                .telefonoCliente(entity.getTelefonoCliente())
-                .estado(toEstadoModel(entity.getEstado()))
-                .fechaCreacion(entity.getFechaCreacion())
-                .fechaEntrega(entity.getFechaEntrega())
-                .pinSeguridad(entity.getPinSeguridad())
-                .idEmpleadoAsignado(entity.getIdEmpleadoAsignado())
-                .items(items)
-                .build();
     }
 }

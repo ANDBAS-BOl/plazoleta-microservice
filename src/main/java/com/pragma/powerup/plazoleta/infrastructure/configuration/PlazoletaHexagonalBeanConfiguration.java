@@ -24,6 +24,9 @@ import com.pragma.powerup.plazoleta.infrastructure.out.http.client.MensajeriaCli
 import com.pragma.powerup.plazoleta.infrastructure.out.http.client.TrazabilidadClient;
 import com.pragma.powerup.plazoleta.infrastructure.out.http.client.UsuariosClient;
 import com.pragma.powerup.plazoleta.infrastructure.out.jpa.adapter.CatalogJpaAdapter;
+import com.pragma.powerup.plazoleta.infrastructure.out.jpa.mapper.IDishEntityMapper;
+import com.pragma.powerup.plazoleta.infrastructure.out.jpa.mapper.IOrderEntityMapper;
+import com.pragma.powerup.plazoleta.infrastructure.out.jpa.mapper.IRestaurantEntityMapper;
 import com.pragma.powerup.plazoleta.infrastructure.out.jpa.adapter.OrderEfficiencyJpaAdapter;
 import com.pragma.powerup.plazoleta.infrastructure.out.jpa.adapter.OrderJpaAdapter;
 import com.pragma.powerup.plazoleta.infrastructure.out.jpa.repository.DishRepository;
@@ -40,8 +43,15 @@ public class PlazoletaHexagonalBeanConfiguration {
     @Bean
     public CatalogPersistencePort catalogPersistencePort(RestaurantRepository restaurantRepository,
                                                          DishRepository dishRepository,
-                                                         EmployeeRestaurantRepository employeeRestaurantRepository) {
-        return new CatalogJpaAdapter(restaurantRepository, dishRepository, employeeRestaurantRepository);
+                                                         EmployeeRestaurantRepository employeeRestaurantRepository,
+                                                         IRestaurantEntityMapper restaurantEntityMapper,
+                                                         IDishEntityMapper dishEntityMapper) {
+        return new CatalogJpaAdapter(
+                restaurantRepository,
+                dishRepository,
+                employeeRestaurantRepository,
+                restaurantEntityMapper,
+                dishEntityMapper);
     }
 
     @Bean
@@ -59,12 +69,18 @@ public class PlazoletaHexagonalBeanConfiguration {
     public OrderPersistencePort orderPersistencePort(RestaurantRepository restaurantRepository,
                                                      DishRepository dishRepository,
                                                      OrderRepository orderRepository,
-                                                     EmployeeRestaurantRepository employeeRestaurantRepository) {
+                                                     EmployeeRestaurantRepository employeeRestaurantRepository,
+                                                     IRestaurantEntityMapper restaurantEntityMapper,
+                                                     IDishEntityMapper dishEntityMapper,
+                                                     IOrderEntityMapper orderEntityMapper) {
         return new OrderJpaAdapter(
                 restaurantRepository,
                 dishRepository,
                 orderRepository,
-                employeeRestaurantRepository);
+                employeeRestaurantRepository,
+                restaurantEntityMapper,
+                dishEntityMapper,
+                orderEntityMapper);
     }
 
     @Bean

@@ -25,6 +25,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
+import javax.validation.Valid;
+
 @RestController
 @RequestMapping("/api/v1/plazoleta")
 @RequiredArgsConstructor
@@ -35,7 +37,7 @@ public class OrderRestController {
     @PostMapping("/pedidos")
     @PreAuthorize("hasRole('CLIENTE')")
     @ResponseStatus(HttpStatus.CREATED)
-    public OrderResponse createOrder(@RequestBody CreateOrderRequest request,
+    public OrderResponse createOrder(@Valid @RequestBody CreateOrderRequest request,
                                      @AuthenticationPrincipal UsuarioPrincipal principal) {
         return orderHandler.createOrder(request, principal.getId());
     }
@@ -67,7 +69,7 @@ public class OrderRestController {
     @PatchMapping("/pedidos/{idPedido}/entregar")
     @PreAuthorize("hasRole('EMPLEADO')")
     public OrderResponse deliverOrder(@PathVariable Long idPedido,
-                                      @RequestBody DeliverOrderRequest request,
+                                      @Valid @RequestBody DeliverOrderRequest request,
                                       @AuthenticationPrincipal UsuarioPrincipal principal) {
         return orderHandler.deliverOrder(idPedido, request, principal.getId());
     }

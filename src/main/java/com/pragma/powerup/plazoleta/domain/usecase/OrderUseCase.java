@@ -16,10 +16,10 @@ import com.pragma.powerup.plazoleta.domain.spi.OrderMessagingPort;
 import com.pragma.powerup.plazoleta.domain.spi.OrderPersistencePort;
 import com.pragma.powerup.plazoleta.domain.spi.OrderPinGeneratorPort;
 import com.pragma.powerup.plazoleta.domain.spi.OrderTraceabilityPort;
+import com.pragma.powerup.plazoleta.domain.utils.DomainErrorMessage;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Objects;
 
 public class OrderUseCase implements OrderUseCasePort {
 
@@ -43,23 +43,18 @@ public class OrderUseCase implements OrderUseCasePort {
     @Override
     public OrderModel createOrder(Long clientId, Long restaurantId, String telefonoCliente, List<OrderItemModel> items) {
         if (orderPersistencePort.hasActiveOrder(clientId)) {
-            throw new BusinessRuleException("Ya tienes un pedido en proceso");
+            throw new BusinessRuleException(DomainErrorMessage.ACTIVE_ORDER_EXISTS.getMessage());
         }
-        if (items == null || items.isEmpty()) {
-            throw new BusinessRuleException("El pedido debe contener platos");
-        }
+        OrderItemModel.assertNotEmpty(items);
+
         RestaurantModel restaurant = orderPersistencePort.findRestaurantById(restaurantId)
-                .orElseThrow(() -> new ResourceNotFoundException("Restaurante no existe"));
+                .orElseThrow(() -> new ResourceNotFoundException(DomainErrorMessage.RESTAURANT_NOT_FOUND.getMessage()));
 
         for (OrderItemModel item : items) {
             DishModel dish = orderPersistencePort.findDishById(item.getIdPlato())
-                    .orElseThrow(() -> new ResourceNotFoundException("Plato no existe"));
-            if (!Boolean.TRUE.equals(dish.getActivo())) {
-                throw new BusinessRuleException("No se pueden pedir platos inactivos");
-            }
-            if (!dish.getIdRestaurante().equals(restaurant.getId())) {
-                throw new BusinessRuleException("Un pedido debe incluir platos de un solo restaurante");
-            }
+                    .orElseThrow(() -> new ResourceNotFoundException(DomainErrorMessage.DISH_NOT_FOUND.getMessage()));
+            dish.assertIsActive();
+            dish.assertBelongsToRestaurant(restaurant.getId());
         }
 
         OrderModel toCreate = OrderModel.builder()
@@ -79,26 +74,26 @@ public class OrderUseCase implements OrderUseCasePort {
     @Override
     public PageResult<OrderModel> listOrdersByStatus(Long employeeId, EstadoPedidoModel estado, PaginationParams pagination) {
         Long restaurantId = orderPersistencePort.findRestaurantIdByEmployee(employeeId)
-                .orElseThrow(() -> new AccessDeniedException("El empleado no esta asignado a un restaurante"));
+                .orElseThrow(() -> new AccessDeniedException(DomainErrorMessage.EMPLOYEE_NOT_IN_RESTAURANT.getMessage()));
         return orderPersistencePort.listOrdersByStatus(restaurantId, estado, pagination);
     }
 
     @Override
     public OrderModel takeOrder(Long idOrder, Long employeeId) {
         OrderModel order = orderPersistencePort.findOrderById(idOrder)
-                .orElseThrow(() -> new ResourceNotFoundException("Pedido no existe"));
+                .orElseThrow(() -> new ResourceNotFoundException(DomainErrorMessage.ORDER_NOT_FOUND.getMessage()));
         Long employeeRestaurantId = orderPersistencePort.findRestaurantIdByEmployee(employeeId)
-                .orElseThrow(() -> new AccessDeniedException("El empleado no esta asignado a un restaurante"));
+                .orElseThrow(() -> new AccessDeniedException(DomainErrorMessage.EMPLOYEE_NOT_IN_RESTAURANT.getMessage()));
 
         if (!employeeRestaurantId.equals(order.getIdRestaurante())) {
-            throw new AccessDeniedException("Solo puedes tomar pedidos de tu restaurante");
+            throw new AccessDeniedException(DomainErrorMessage.EMPLOYEE_NOT_IN_SAME_RESTAURANT.getMessage());
         }
         int updated = orderPersistencePort.takeOrderIfPending(idOrder, employeeId);
         if (updated == 0) {
-            throw new BusinessRuleException("El pedido ya fue asignado o no esta pendiente");
+            throw new BusinessRuleException(DomainErrorMessage.ORDER_ALREADY_ASSIGNED.getMessage());
         }
         OrderModel current = orderPersistencePort.findOrderById(idOrder)
-                .orElseThrow(() -> new ResourceNotFoundException("Pedido no existe"));
+                .orElseThrow(() -> new ResourceNotFoundException(DomainErrorMessage.ORDER_NOT_FOUND.getMessage()));
         orderTraceabilityPort.registerTransition(current, EstadoPedidoModel.PENDIENTE, EstadoPedidoModel.EN_PREPARACION);
         return current;
     }
@@ -106,13 +101,9 @@ public class OrderUseCase implements OrderUseCasePort {
     @Override
     public OrderModel markReady(Long idOrder, Long employeeId) {
         OrderModel order = orderPersistencePort.findOrderById(idOrder)
-                .orElseThrow(() -> new ResourceNotFoundException("Pedido no existe"));
-        if (!employeeId.equals(order.getIdEmpleadoAsignado())) {
-            throw new AccessDeniedException("Solo el empleado asignado puede marcar LISTO");
-        }
-        if (order.getEstado() != EstadoPedidoModel.EN_PREPARACION) {
-            throw new BusinessRuleException("Solo pedidos EN_PREPARACION pueden pasar a LISTO");
-        }
+                .orElseThrow(() -> new ResourceNotFoundException(DomainErrorMessage.ORDER_NOT_FOUND.getMessage()));
+        order.assertAssignedEmployeeCanMarkReady(employeeId);
+        order.assertIsEnPreparacion();
 
         String pin = generateUniquePin();
         orderMessagingPort.sendOrderReadyPin(order.getTelefonoCliente(), pin);
@@ -137,16 +128,10 @@ public class OrderUseCase implements OrderUseCasePort {
     @Override
     public OrderModel deliverOrder(Long idOrder, Long employeeId, String pin) {
         OrderModel order = orderPersistencePort.findOrderById(idOrder)
-                .orElseThrow(() -> new ResourceNotFoundException("Pedido no existe"));
-        if (!employeeId.equals(order.getIdEmpleadoAsignado())) {
-            throw new AccessDeniedException("Solo el empleado asignado puede entregar");
-        }
-        if (order.getEstado() != EstadoPedidoModel.LISTO) {
-            throw new BusinessRuleException("Solo pedidos LISTO pueden pasar a ENTREGADO");
-        }
-        if (!Objects.equals(order.getPinSeguridad(), pin)) {
-            throw new BusinessRuleException("PIN invalido");
-        }
+                .orElseThrow(() -> new ResourceNotFoundException(DomainErrorMessage.ORDER_NOT_FOUND.getMessage()));
+        order.assertAssignedEmployeeCanDeliver(employeeId);
+        order.assertIsListo();
+        order.assertPin(pin);
 
         OrderModel updated = OrderModel.builder()
                 .id(order.getId())
@@ -168,13 +153,9 @@ public class OrderUseCase implements OrderUseCasePort {
     @Override
     public OrderModel cancelOrder(Long idOrder, Long clientId) {
         OrderModel order = orderPersistencePort.findOrderById(idOrder)
-                .orElseThrow(() -> new ResourceNotFoundException("Pedido no existe"));
-        if (!order.getIdCliente().equals(clientId)) {
-            throw new AccessDeniedException("No puedes cancelar pedidos de otro cliente");
-        }
-        if (order.getEstado() != EstadoPedidoModel.PENDIENTE) {
-            throw new BusinessRuleException("Lo sentimos, tu pedido ya esta en preparacion y no puede cancelarse");
-        }
+                .orElseThrow(() -> new ResourceNotFoundException(DomainErrorMessage.ORDER_NOT_FOUND.getMessage()));
+        order.assertBelongsToClient(clientId);
+        order.assertIsPending();
 
         OrderModel updated = OrderModel.builder()
                 .id(order.getId())
@@ -200,6 +181,6 @@ public class OrderUseCase implements OrderUseCasePort {
                 return pin;
             }
         }
-        throw new InternalProcessException("No se pudo generar un PIN unico");
+        throw new InternalProcessException(DomainErrorMessage.PIN_GENERATION_FAILED.getMessage());
     }
 }

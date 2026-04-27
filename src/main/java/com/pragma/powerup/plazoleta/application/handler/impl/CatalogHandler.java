@@ -7,7 +7,7 @@ import com.pragma.powerup.plazoleta.application.dto.request.UpdateDishRequest;
 import com.pragma.powerup.plazoleta.application.dto.response.DishResponse;
 import com.pragma.powerup.plazoleta.application.dto.response.RestaurantCardResponse;
 import com.pragma.powerup.plazoleta.application.handler.ICatalogHandler;
-import com.pragma.powerup.plazoleta.application.mapper.PlazoletaDtoMapper;
+import com.pragma.powerup.plazoleta.application.mapper.IPlazoletaDtoMapper;
 import com.pragma.powerup.plazoleta.domain.api.CatalogUseCasePort;
 import com.pragma.powerup.plazoleta.domain.model.PageResult;
 import com.pragma.powerup.plazoleta.domain.model.PaginationParams;
@@ -20,17 +20,18 @@ import org.springframework.transaction.annotation.Transactional;
 public class CatalogHandler implements ICatalogHandler {
 
     private final CatalogUseCasePort catalogUseCasePort;
+    private final IPlazoletaDtoMapper plazoletaDtoMapper;
 
     @Override
     @Transactional
     public Long createRestaurant(CreateRestaurantRequest request) {
-        return catalogUseCasePort.createRestaurant(PlazoletaDtoMapper.toRestaurantModel(request));
+        return catalogUseCasePort.createRestaurant(plazoletaDtoMapper.toRestaurantModel(request));
     }
 
     @Override
     @Transactional
     public Long createDish(CreateDishRequest request, Long ownerId) {
-        return catalogUseCasePort.createDish(PlazoletaDtoMapper.toDishModel(request), ownerId);
+        return catalogUseCasePort.createDish(plazoletaDtoMapper.toDishModel(request), ownerId);
     }
 
     @Override
@@ -42,7 +43,7 @@ public class CatalogHandler implements ICatalogHandler {
     @Override
     @Transactional
     public void updateDish(Long idPlato, UpdateDishRequest request, Long ownerId) {
-        catalogUseCasePort.updateDish(idPlato, ownerId, PlazoletaDtoMapper.toDishUpdateModel(request));
+        catalogUseCasePort.updateDish(idPlato, ownerId, plazoletaDtoMapper.toDishUpdateModel(request));
     }
 
     @Override
@@ -55,13 +56,13 @@ public class CatalogHandler implements ICatalogHandler {
     public PageResult<RestaurantCardResponse> listRestaurants(int page, int size) {
         return catalogUseCasePort
                 .listRestaurants(new PaginationParams(page, size))
-                .map(PlazoletaDtoMapper::toRestaurantCardResponse);
+                .map(plazoletaDtoMapper::toRestaurantCardResponse);
     }
 
     @Override
     public PageResult<DishResponse> listDishes(Long idRestaurante, String categoria, int page, int size) {
         return catalogUseCasePort
                 .listDishes(idRestaurante, categoria, new PaginationParams(page, size))
-                .map(PlazoletaDtoMapper::toDishResponse);
+                .map(plazoletaDtoMapper::toDishResponse);
     }
 }

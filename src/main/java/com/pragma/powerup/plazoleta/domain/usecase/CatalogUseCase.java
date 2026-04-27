@@ -10,8 +10,7 @@ import com.pragma.powerup.plazoleta.domain.model.PaginationParams;
 import com.pragma.powerup.plazoleta.domain.model.RestaurantModel;
 import com.pragma.powerup.plazoleta.domain.spi.CatalogPersistencePort;
 import com.pragma.powerup.plazoleta.domain.spi.UsuariosValidationPort;
-
-import java.math.BigDecimal;
+import com.pragma.powerup.plazoleta.domain.utils.DomainErrorMessage;
 
 public class CatalogUseCase implements CatalogUseCasePort {
 
@@ -26,32 +25,19 @@ public class CatalogUseCase implements CatalogUseCasePort {
 
     @Override
     public Long createRestaurant(RestaurantModel restaurantModel) {
-        if (!restaurantModel.getNit().matches("\\d+")) {
-            throw new BusinessRuleException("El NIT debe ser numerico");
-        }
-        if (!restaurantModel.getTelefono().matches("^\\+?\\d{1,13}$")) {
-            throw new BusinessRuleException("Telefono invalido");
-        }
-        if (restaurantModel.getNombre().matches("^\\d+$")) {
-            throw new BusinessRuleException("Nombre de restaurante invalido");
-        }
         if (!usuariosValidationPort.isPropietario(restaurantModel.getIdPropietario())) {
-            throw new BusinessRuleException("El idPropietario no corresponde a un usuario con rol PROPIETARIO");
+            throw new BusinessRuleException(DomainErrorMessage.OWNER_NOT_PROPIETARIO.getMessage());
         }
-
         return catalogPersistencePort.createRestaurant(restaurantModel);
     }
 
     @Override
     public Long createDish(DishModel dishModel, Long ownerId) {
         RestaurantModel restaurant = catalogPersistencePort.findRestaurantById(dishModel.getIdRestaurante())
-                .orElseThrow(() -> new ResourceNotFoundException("Restaurante no existe"));
+                .orElseThrow(() -> new ResourceNotFoundException(DomainErrorMessage.RESTAURANT_NOT_FOUND.getMessage()));
 
         if (!restaurant.getIdPropietario().equals(ownerId)) {
-            throw new AccessDeniedException("No puedes crear platos en restaurantes de otro propietario");
-        }
-        if (dishModel.getPrecio().compareTo(BigDecimal.ZERO) <= 0) {
-            throw new BusinessRuleException("El precio debe ser mayor a 0");
+            throw new AccessDeniedException(DomainErrorMessage.NOT_RESTAURANT_OWNER_CREATE.getMessage());
         }
 
         DishModel dishToCreate = DishModel.builder()
@@ -63,22 +49,20 @@ public class CatalogUseCase implements CatalogUseCasePort {
                 .categoria(dishModel.getCategoria())
                 .activo(true)
                 .build();
+
         return catalogPersistencePort.createDish(dishToCreate);
     }
 
     @Override
     public void updateDish(Long idDish, Long ownerId, DishModel dishModel) {
         DishModel currentDish = catalogPersistencePort.findDishById(idDish)
-                .orElseThrow(() -> new ResourceNotFoundException("Plato no existe"));
+                .orElseThrow(() -> new ResourceNotFoundException(DomainErrorMessage.DISH_NOT_FOUND.getMessage()));
 
         RestaurantModel restaurant = catalogPersistencePort.findRestaurantById(currentDish.getIdRestaurante())
-                .orElseThrow(() -> new ResourceNotFoundException("Restaurante no existe"));
+                .orElseThrow(() -> new ResourceNotFoundException(DomainErrorMessage.RESTAURANT_NOT_FOUND.getMessage()));
 
         if (!restaurant.getIdPropietario().equals(ownerId)) {
-            throw new AccessDeniedException("No puedes modificar platos de otro restaurante");
-        }
-        if (dishModel.getPrecio().compareTo(BigDecimal.ZERO) <= 0) {
-            throw new BusinessRuleException("El precio debe ser mayor a 0");
+            throw new AccessDeniedException(DomainErrorMessage.NOT_RESTAURANT_OWNER_MODIFY.getMessage());
         }
 
         DishModel updatedDish = DishModel.builder()
@@ -97,12 +81,14 @@ public class CatalogUseCase implements CatalogUseCasePort {
     @Override
     public void setDishActive(Long idDish, Long ownerId, boolean active) {
         DishModel currentDish = catalogPersistencePort.findDishById(idDish)
-                .orElseThrow(() -> new ResourceNotFoundException("Plato no existe"));
+                .orElseThrow(() -> new ResourceNotFoundException(DomainErrorMessage.DISH_NOT_FOUND.getMessage()));
         RestaurantModel restaurant = catalogPersistencePort.findRestaurantById(currentDish.getIdRestaurante())
-                .orElseThrow(() -> new ResourceNotFoundException("Restaurante no existe"));
+                .orElseThrow(() -> new ResourceNotFoundException(DomainErrorMessage.RESTAURANT_NOT_FOUND.getMessage()));
+
         if (!restaurant.getIdPropietario().equals(ownerId)) {
-            throw new AccessDeniedException("No puedes modificar platos de otro restaurante");
+            throw new AccessDeniedException(DomainErrorMessage.NOT_RESTAURANT_OWNER_MODIFY.getMessage());
         }
+
         DishModel updatedDish = DishModel.builder()
                 .id(currentDish.getId())
                 .idRestaurante(currentDish.getIdRestaurante())
@@ -129,16 +115,16 @@ public class CatalogUseCase implements CatalogUseCasePort {
     @Override
     public Long assignEmployeeToRestaurant(Long restaurantId, Long employeeId, Long ownerId) {
         RestaurantModel restaurant = catalogPersistencePort.findRestaurantById(restaurantId)
-                .orElseThrow(() -> new ResourceNotFoundException("Restaurante no existe"));
+                .orElseThrow(() -> new ResourceNotFoundException(DomainErrorMessage.RESTAURANT_NOT_FOUND.getMessage()));
 
         if (!restaurant.getIdPropietario().equals(ownerId)) {
-            throw new AccessDeniedException("No puedes asignar empleados en restaurantes de otro propietario");
+            throw new AccessDeniedException(DomainErrorMessage.NOT_RESTAURANT_OWNER_ASSIGN.getMessage());
         }
         if (!usuariosValidationPort.isEmpleado(employeeId)) {
-            throw new BusinessRuleException("El idEmpleado no corresponde a un usuario con rol EMPLEADO");
+            throw new BusinessRuleException(DomainErrorMessage.EMPLOYEE_NOT_EMPLEADO.getMessage());
         }
         if (catalogPersistencePort.existsEmployeeAssignment(employeeId, restaurantId)) {
-            throw new BusinessRuleException("El empleado ya esta asignado a este restaurante");
+            throw new BusinessRuleException(DomainErrorMessage.EMPLOYEE_ALREADY_ASSIGNED_RESTAURANT.getMessage());
         }
 
         return catalogPersistencePort.saveEmployeeAssignment(employeeId, restaurantId);

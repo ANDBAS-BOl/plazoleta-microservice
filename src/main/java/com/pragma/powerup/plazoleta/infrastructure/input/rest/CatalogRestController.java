@@ -26,6 +26,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
+import javax.validation.Valid;
 import java.util.Map;
 
 @RestController
@@ -38,14 +39,14 @@ public class CatalogRestController {
     @PostMapping("/restaurantes")
     @PreAuthorize("hasRole('ADMINISTRADOR')")
     @ResponseStatus(HttpStatus.CREATED)
-    public Map<String, Long> createRestaurant(@RequestBody CreateRestaurantRequest request) {
+    public Map<String, Long> createRestaurant(@Valid @RequestBody CreateRestaurantRequest request) {
         return Map.of("id", catalogHandler.createRestaurant(request));
     }
 
     @PostMapping("/platos")
     @PreAuthorize("hasRole('PROPIETARIO')")
     @ResponseStatus(HttpStatus.CREATED)
-    public Map<String, Long> createDish(@RequestBody CreateDishRequest request,
+    public Map<String, Long> createDish(@Valid @RequestBody CreateDishRequest request,
                                         @AuthenticationPrincipal UsuarioPrincipal principal) {
         return Map.of("id", catalogHandler.createDish(request, principal.getId()));
     }
@@ -54,7 +55,7 @@ public class CatalogRestController {
     @PreAuthorize("hasRole('PROPIETARIO')")
     @ResponseStatus(HttpStatus.CREATED)
     public Map<String, Long> assignEmployeeToRestaurant(@PathVariable Long idRestaurante,
-                                                         @RequestBody AssignEmployeeRequest request,
+                                                         @Valid @RequestBody AssignEmployeeRequest request,
                                                          @AuthenticationPrincipal UsuarioPrincipal principal) {
         return Map.of("id", catalogHandler.assignEmployeeToRestaurant(idRestaurante, request, principal.getId()));
     }
@@ -63,7 +64,7 @@ public class CatalogRestController {
     @PreAuthorize("hasRole('PROPIETARIO')")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void updateDish(@PathVariable Long idPlato,
-                           @RequestBody UpdateDishRequest request,
+                           @Valid @RequestBody UpdateDishRequest request,
                            @AuthenticationPrincipal UsuarioPrincipal principal) {
         catalogHandler.updateDish(idPlato, request, principal.getId());
     }

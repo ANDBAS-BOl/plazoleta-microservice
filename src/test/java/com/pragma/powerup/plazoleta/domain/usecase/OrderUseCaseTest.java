@@ -15,6 +15,7 @@ import com.pragma.powerup.plazoleta.domain.spi.OrderMessagingPort;
 import com.pragma.powerup.plazoleta.domain.spi.OrderPersistencePort;
 import com.pragma.powerup.plazoleta.domain.spi.OrderPinGeneratorPort;
 import com.pragma.powerup.plazoleta.domain.spi.OrderTraceabilityPort;
+import com.pragma.powerup.plazoleta.domain.utils.DomainErrorMessage;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -56,7 +57,7 @@ class OrderUseCaseTest {
 
         BusinessRuleException ex = assertThrows(BusinessRuleException.class,
                 () -> orderUseCase.createOrder(10L, 1L, "3001234567", items));
-        assertTrue(ex.getMessage().contains("pedido en proceso"));
+        assertEquals(DomainErrorMessage.ACTIVE_ORDER_EXISTS.getMessage(), ex.getMessage());
     }
 
     @Test
@@ -65,7 +66,7 @@ class OrderUseCaseTest {
 
         BusinessRuleException ex = assertThrows(BusinessRuleException.class,
                 () -> orderUseCase.createOrder(10L, 1L, "3001234567", List.of()));
-        assertTrue(ex.getMessage().contains("contener platos"));
+        assertEquals(DomainErrorMessage.ORDER_WITHOUT_ITEMS.getMessage(), ex.getMessage());
     }
 
     @Test
@@ -74,7 +75,7 @@ class OrderUseCaseTest {
 
         BusinessRuleException ex = assertThrows(BusinessRuleException.class,
                 () -> orderUseCase.createOrder(10L, 1L, "3001234567", null));
-        assertTrue(ex.getMessage().contains("contener platos"));
+        assertEquals(DomainErrorMessage.ORDER_WITHOUT_ITEMS.getMessage(), ex.getMessage());
     }
 
     @Test
@@ -86,7 +87,7 @@ class OrderUseCaseTest {
 
         ResourceNotFoundException ex = assertThrows(ResourceNotFoundException.class,
                 () -> orderUseCase.createOrder(10L, 99L, "3001234567", items));
-        assertTrue(ex.getMessage().contains("Restaurante"));
+        assertEquals(DomainErrorMessage.RESTAURANT_NOT_FOUND.getMessage(), ex.getMessage());
     }
 
     @Test
@@ -101,7 +102,7 @@ class OrderUseCaseTest {
 
         BusinessRuleException ex = assertThrows(BusinessRuleException.class,
                 () -> orderUseCase.createOrder(10L, 1L, "3001234567", items));
-        assertTrue(ex.getMessage().contains("inactivos"));
+        assertEquals(DomainErrorMessage.DISH_INACTIVE.getMessage(), ex.getMessage());
     }
 
     @Test
@@ -116,7 +117,7 @@ class OrderUseCaseTest {
 
         BusinessRuleException ex = assertThrows(BusinessRuleException.class,
                 () -> orderUseCase.createOrder(10L, 1L, "3001234567", items));
-        assertTrue(ex.getMessage().contains("un solo restaurante"));
+        assertEquals(DomainErrorMessage.DISH_DIFFERENT_RESTAURANT.getMessage(), ex.getMessage());
     }
 
     @Test
@@ -153,7 +154,7 @@ class OrderUseCaseTest {
 
         ResourceNotFoundException ex = assertThrows(ResourceNotFoundException.class,
                 () -> orderUseCase.cancelOrder(99L, 10L));
-        assertTrue(ex.getMessage().contains("Pedido"));
+        assertEquals(DomainErrorMessage.ORDER_NOT_FOUND.getMessage(), ex.getMessage());
     }
 
     @Test
@@ -166,7 +167,7 @@ class OrderUseCaseTest {
 
         AccessDeniedException ex = assertThrows(AccessDeniedException.class,
                 () -> orderUseCase.cancelOrder(10L, 99L));
-        assertTrue(ex.getMessage().contains("otro cliente"));
+        assertEquals(DomainErrorMessage.NOT_ORDER_CLIENT.getMessage(), ex.getMessage());
     }
 
     @Test
@@ -179,7 +180,7 @@ class OrderUseCaseTest {
 
         BusinessRuleException ex = assertThrows(BusinessRuleException.class,
                 () -> orderUseCase.cancelOrder(10L, 50L));
-        assertTrue(ex.getMessage().contains("no puede cancelarse"));
+        assertEquals(DomainErrorMessage.ORDER_NOT_CANCELABLE.getMessage(), ex.getMessage());
     }
 
     @Test
@@ -246,7 +247,7 @@ class OrderUseCaseTest {
 
         BusinessRuleException ex = assertThrows(BusinessRuleException.class,
                 () -> orderUseCase.takeOrder(10L, 200L));
-        assertTrue(ex.getMessage().contains("ya fue asignado"));
+        assertEquals(DomainErrorMessage.ORDER_ALREADY_ASSIGNED.getMessage(), ex.getMessage());
     }
 
     @Test
@@ -261,7 +262,7 @@ class OrderUseCaseTest {
 
         AccessDeniedException ex = assertThrows(AccessDeniedException.class,
                 () -> orderUseCase.takeOrder(10L, 100L));
-        assertTrue(ex.getMessage().contains("tu restaurante"));
+        assertEquals(DomainErrorMessage.EMPLOYEE_NOT_IN_SAME_RESTAURANT.getMessage(), ex.getMessage());
     }
 
     @Test
@@ -276,7 +277,7 @@ class OrderUseCaseTest {
 
         AccessDeniedException ex = assertThrows(AccessDeniedException.class,
                 () -> orderUseCase.takeOrder(10L, 100L));
-        assertTrue(ex.getMessage().contains("no esta asignado"));
+        assertEquals(DomainErrorMessage.EMPLOYEE_NOT_IN_RESTAURANT.getMessage(), ex.getMessage());
     }
 
     // ========================
@@ -366,7 +367,7 @@ class OrderUseCaseTest {
 
         AccessDeniedException ex = assertThrows(AccessDeniedException.class,
                 () -> orderUseCase.markReady(10L, 999L));
-        assertTrue(ex.getMessage().contains("empleado asignado"));
+        assertEquals(DomainErrorMessage.NOT_ASSIGNED_EMPLOYEE_READY.getMessage(), ex.getMessage());
     }
 
     @Test
@@ -380,7 +381,7 @@ class OrderUseCaseTest {
 
         BusinessRuleException ex = assertThrows(BusinessRuleException.class,
                 () -> orderUseCase.markReady(10L, 100L));
-        assertTrue(ex.getMessage().contains("EN_PREPARACION"));
+        assertEquals(DomainErrorMessage.ORDER_NOT_IN_PREPARACION.getMessage(), ex.getMessage());
     }
 
     @Test
@@ -396,7 +397,7 @@ class OrderUseCaseTest {
 
         InternalProcessException ex = assertThrows(InternalProcessException.class,
                 () -> orderUseCase.markReady(10L, 100L));
-        assertTrue(ex.getMessage().contains("PIN unico"));
+        assertEquals(DomainErrorMessage.PIN_GENERATION_FAILED.getMessage(), ex.getMessage());
     }
 
     // ========================
@@ -457,7 +458,7 @@ class OrderUseCaseTest {
 
         BusinessRuleException ex = assertThrows(BusinessRuleException.class,
                 () -> orderUseCase.deliverOrder(10L, 100L, "123456"));
-        assertTrue(ex.getMessage().contains("LISTO"));
+        assertEquals(DomainErrorMessage.ORDER_NOT_LISTO.getMessage(), ex.getMessage());
     }
 
     @Test
@@ -471,7 +472,7 @@ class OrderUseCaseTest {
 
         AccessDeniedException ex = assertThrows(AccessDeniedException.class,
                 () -> orderUseCase.deliverOrder(10L, 999L, "123456"));
-        assertTrue(ex.getMessage().contains("empleado asignado"));
+        assertEquals(DomainErrorMessage.NOT_ASSIGNED_EMPLOYEE_DELIVER.getMessage(), ex.getMessage());
     }
 
     // ========================
@@ -498,6 +499,6 @@ class OrderUseCaseTest {
 
         AccessDeniedException ex = assertThrows(AccessDeniedException.class,
                 () -> orderUseCase.listOrdersByStatus(100L, EstadoPedidoModel.PENDIENTE, new PaginationParams(0, 10)));
-        assertTrue(ex.getMessage().contains("no esta asignado"));
+        assertEquals(DomainErrorMessage.EMPLOYEE_NOT_IN_RESTAURANT.getMessage(), ex.getMessage());
     }
 }

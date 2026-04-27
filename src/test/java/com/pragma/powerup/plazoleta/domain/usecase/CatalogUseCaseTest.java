@@ -9,6 +9,7 @@ import com.pragma.powerup.plazoleta.domain.model.PaginationParams;
 import com.pragma.powerup.plazoleta.domain.model.RestaurantModel;
 import com.pragma.powerup.plazoleta.domain.spi.CatalogPersistencePort;
 import com.pragma.powerup.plazoleta.domain.spi.UsuariosValidationPort;
+import com.pragma.powerup.plazoleta.domain.utils.DomainErrorMessage;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -170,13 +171,9 @@ class CatalogUseCaseTest {
         when(catalogPersistencePort.findDishById(9L)).thenReturn(Optional.of(currentDish));
         when(catalogPersistencePort.findRestaurantById(5L)).thenReturn(Optional.of(restaurant));
 
-        DishModel update = DishModel.builder()
-                .precio(BigDecimal.ZERO)
-                .descripcion("nueva")
-                .build();
-
-        BusinessRuleException ex = assertThrows(BusinessRuleException.class,
-                () -> catalogUseCase.updateDish(9L, 30L, update));
+        BusinessRuleException ex = assertThrows(BusinessRuleException.class, () ->
+                catalogUseCase.updateDish(9L, 30L,
+                        DishModel.builder().precio(BigDecimal.ZERO).descripcion("nueva").build()));
         assertEquals("El precio debe ser mayor a 0", ex.getMessage());
         verify(catalogPersistencePort, never()).updateDish(any());
     }
@@ -206,50 +203,47 @@ class CatalogUseCaseTest {
 
     @Test
     void createRestaurantShouldFailWhenNitIsNotNumeric() {
-        RestaurantModel model = RestaurantModel.builder()
-                .nombre("Restaurante Beta")
-                .nit("ABC123")
-                .direccion("Calle 20")
-                .telefono("+573001234567")
-                .urlLogo("http://logo.png")
-                .idPropietario(10L)
-                .build();
-
-        BusinessRuleException ex = assertThrows(BusinessRuleException.class,
-                () -> catalogUseCase.createRestaurant(model));
+        BusinessRuleException ex = assertThrows(BusinessRuleException.class, () ->
+                RestaurantModel.builder()
+                        .nombre("Restaurante Beta")
+                        .nit("ABC123")
+                        .direccion("Calle 20")
+                        .telefono("+573001234567")
+                        .urlLogo("http://logo.png")
+                        .idPropietario(10L)
+                        .build());
         assertEquals("El NIT debe ser numerico", ex.getMessage());
+        verify(catalogPersistencePort, never()).createRestaurant(any());
     }
 
     @Test
     void createRestaurantShouldFailWhenPhoneInvalid() {
-        RestaurantModel model = RestaurantModel.builder()
-                .nombre("Restaurante Gamma")
-                .nit("999888")
-                .direccion("Calle 30")
-                .telefono("no-es-telefono")
-                .urlLogo("http://logo.png")
-                .idPropietario(10L)
-                .build();
-
-        BusinessRuleException ex = assertThrows(BusinessRuleException.class,
-                () -> catalogUseCase.createRestaurant(model));
+        BusinessRuleException ex = assertThrows(BusinessRuleException.class, () ->
+                RestaurantModel.builder()
+                        .nombre("Restaurante Gamma")
+                        .nit("999888")
+                        .direccion("Calle 30")
+                        .telefono("no-es-telefono")
+                        .urlLogo("http://logo.png")
+                        .idPropietario(10L)
+                        .build());
         assertEquals("Telefono invalido", ex.getMessage());
+        verify(catalogPersistencePort, never()).createRestaurant(any());
     }
 
     @Test
     void createRestaurantShouldFailWhenNameIsOnlyNumbers() {
-        RestaurantModel model = RestaurantModel.builder()
-                .nombre("12345")
-                .nit("999888")
-                .direccion("Calle 40")
-                .telefono("+573001112233")
-                .urlLogo("http://logo.png")
-                .idPropietario(10L)
-                .build();
-
-        BusinessRuleException ex = assertThrows(BusinessRuleException.class,
-                () -> catalogUseCase.createRestaurant(model));
+        BusinessRuleException ex = assertThrows(BusinessRuleException.class, () ->
+                RestaurantModel.builder()
+                        .nombre("12345")
+                        .nit("999888")
+                        .direccion("Calle 40")
+                        .telefono("+573001112233")
+                        .urlLogo("http://logo.png")
+                        .idPropietario(10L)
+                        .build());
         assertEquals("Nombre de restaurante invalido", ex.getMessage());
+        verify(catalogPersistencePort, never()).createRestaurant(any());
     }
 
     // ========================
@@ -299,7 +293,7 @@ class CatalogUseCaseTest {
 
         AccessDeniedException ex = assertThrows(AccessDeniedException.class,
                 () -> catalogUseCase.updateDish(9L, 99L, update));
-        assertTrue(ex.getMessage().contains("otro restaurante"));
+        assertEquals(DomainErrorMessage.NOT_RESTAURANT_OWNER_MODIFY.getMessage(), ex.getMessage());
         verify(catalogPersistencePort, never()).updateDish(any());
     }
 
@@ -367,7 +361,7 @@ class CatalogUseCaseTest {
 
         AccessDeniedException ex = assertThrows(AccessDeniedException.class,
                 () -> catalogUseCase.setDishActive(7L, 99L, false));
-        assertTrue(ex.getMessage().contains("otro restaurante"));
+        assertEquals(DomainErrorMessage.NOT_RESTAURANT_OWNER_MODIFY.getMessage(), ex.getMessage());
         verify(catalogPersistencePort, never()).updateDish(any());
     }
 
