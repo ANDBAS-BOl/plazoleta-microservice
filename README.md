@@ -106,7 +106,7 @@ una regla no se cumple.
 | Métodos | 106 / 146 | **72,60%** |
 | Clases | 34 / 34 | **100%** |
 
-Cobertura por paquete (instrucciones):
+Cobertura por paquete:
 
 | Paquete | % |
 |---|---|
@@ -120,22 +120,3 @@ Cobertura por paquete (instrucciones):
 | `infrastructure.input.rest` | 29,45% |
 | `infrastructure.out.jpa.adapter` | 33,05% |
 | `infrastructure.out.pin` | 38,10% |
-
-> **Cumplimiento:** Ni `RETO.MD`, `listado_HU.md` ni `plan.md` definen un umbral
-> de cobertura específico para el reto (Fase 6 del plan habla de pruebas
-> "orientativas"). Las reglas configuradas siguen una práctica de industria
-> exigiendo cobertura alta en el dominio (núcleo de negocio) y un mínimo
-> razonable en el resto. El núcleo (`domain.usecase`) supera ampliamente el
-> umbral del 90% (96,49%); el global (76,28%) cumple el 75% del bundle.
-
-### Cómo elevar la cobertura global
-
-Las áreas de menor cobertura están en infraestructura por diseño (su
-contrato real se valida vía pruebas de integración):
-
-- `infrastructure.input.rest` se cubre indirectamente con `SecurityAuthorizationTest`,
-  `ControllerContractBaselineTest` y `PlazoletaHandlerWiringTest`. Para subirlo,
-  añadir tests `@WebMvcTest` por endpoint feliz/error.
-- `infrastructure.out.jpa.adapter` se eleva con tests `@DataJpaTest` contra H2
-  (ya disponible en `testRuntimeOnly`).
-- `infrastructure.out.pin` se eleva con un test directo del `RandomPinGeneratorAdapter`.
