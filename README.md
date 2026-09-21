@@ -2,6 +2,21 @@
 
 Es el microservicio principal de la lógica de negocio para gestionar el flujo de pedidos y el catálogo (restaurantes y platos) del Sistema Plaza de Comidas.
 
+## El sistema completo
+
+Este repositorio es **un componente del Sistema Plaza de Comidas**, compuesto por 4 microservicios independientes más su infraestructura. Cada servicio tiene su propia base de datos y valida el JWT de forma autónoma.
+
+> **Para levantar el sistema, empieza por [`plazoleta-deployment`](https://github.com/ANDBAS-BOl/plazoleta-deployment)**, que arranca MySQL y MongoDB.
+
+| Repositorio | Responsabilidad | Datos |
+|---|---|---|
+| [`usuarios-microservice`](https://github.com/ANDBAS-BOl/usuarios-microservice) | Usuarios, roles y **emisión de JWT** (único emisor del sistema) | MySQL |
+| **`plazoleta-microservice`** ← estás aquí | Catálogo de restaurantes/platos, flujo de pedidos y PIN de entrega | MySQL |
+| [`trazabilidad-microservice`](https://github.com/ANDBAS-BOl/trazabilidad-microservice) | Historial de estados de pedidos y métricas de eficiencia | MongoDB |
+| [`mensajeria-microservice`](https://github.com/ANDBAS-BOl/mensajeria-microservice) | Envío del SMS con el PIN, vía Twilio | — |
+| [`plazoleta-deployment`](https://github.com/ANDBAS-BOl/plazoleta-deployment) | Infraestructura Docker: MySQL y MongoDB del sistema | — |
+
+---
 ## Rol en el Sistema
 * **Catálogo:** Administración de Restaurantes y Platos (creación, modificación, borrado lógico). Restricción: Cada pedido contiene platos de un solo restaurante.
 * **Flujo de pedidos:** Gestiona los estados del pedido: PENDIENTE -> EN_PREPARACION -> LISTO -> ENTREGADO (y CANCELADO desde PENDIENTE).
