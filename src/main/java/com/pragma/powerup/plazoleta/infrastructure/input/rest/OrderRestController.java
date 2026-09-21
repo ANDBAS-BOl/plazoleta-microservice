@@ -52,7 +52,8 @@ public class OrderRestController {
         return new PageImpl<>(result.content(), PageRequest.of(page, size), result.totalElements());
     }
 
-    //Todo revisar para usar Put en vez de patch, relacionado a idempotencia
+    // PATCH y no PUT: tomar el pedido no es idempotente, solo lo logra el primer
+    // empleado que llega mientras sigue en PENDIENTE.
     @PatchMapping("/pedidos/{idPedido}/asignar")
     @PreAuthorize("hasRole('EMPLEADO')")
     public OrderResponse takeOrder(@PathVariable Long idPedido,

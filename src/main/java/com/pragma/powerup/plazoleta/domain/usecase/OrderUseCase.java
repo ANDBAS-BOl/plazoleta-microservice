@@ -135,7 +135,9 @@ public class OrderUseCase implements OrderUseCasePort {
 
         int updated = orderPersistencePort.deliverOrderIfListoAndPin(idOrder, employeeId, pin);
         if (updated == 0) {
-            //todo revisar como pasar esta validacion al modelo/clasedd
+            // El UPDATE condicional no afecto filas: entre las validaciones en memoria y
+            // la escritura, otra transaccion ya entrego el pedido. Es una condicion de
+            // carrera que solo detecta la base de datos, no una regla del modelo.
             throw new BusinessRuleException(DomainErrorMessage.ORDER_NOT_LISTO.getMessage());
         }
 

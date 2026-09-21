@@ -14,7 +14,9 @@ public class JwtTokenProvider {
 
     private final SecretKey signingKey;
 
-    //TODO Revisar como está funcionado el encode o el encryp, si esta tomando o no el texto.
+    // El secreto se comparte con usuarios-microservice y se usa tal cual como material
+    // de clave HMAC (bytes UTF-8), sin derivacion adicional: ambos servicios deben
+    // partir del mismo texto. HS256 exige minimo 32 bytes.
     public JwtTokenProvider(@Value("${security.jwt.secret}") String secret) {
         this.signingKey = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
     }
