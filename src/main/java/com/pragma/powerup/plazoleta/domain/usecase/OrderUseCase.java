@@ -133,21 +133,16 @@ public class OrderUseCase implements OrderUseCasePort {
         order.assertIsListo();
         order.assertPin(pin);
 
-        OrderModel updated = OrderModel.builder()
-                .id(order.getId())
-                .idRestaurante(order.getIdRestaurante())
-                .idCliente(order.getIdCliente())
-                .telefonoCliente(order.getTelefonoCliente())
-                .estado(EstadoPedidoModel.ENTREGADO)
-                .fechaCreacion(order.getFechaCreacion())
-                .fechaEntrega(LocalDateTime.now())
-                .pinSeguridad(null)
-                .idEmpleadoAsignado(order.getIdEmpleadoAsignado())
-                .items(order.getItems())
-                .build();
-        OrderModel saved = orderPersistencePort.saveOrder(updated);
-        orderTraceabilityPort.registerTransition(saved, EstadoPedidoModel.LISTO, EstadoPedidoModel.ENTREGADO);
-        return saved;
+        int updated = orderPersistencePort.deliverOrderIfListoAndPin(idOrder, employeeId, pin);
+        if (updated == 0) {
+            //todo revisar como pasar esta validacion al modelo/clasedd
+            throw new BusinessRuleException(DomainErrorMessage.ORDER_NOT_LISTO.getMessage());
+        }
+
+        OrderModel current = orderPersistencePort.findOrderById(idOrder)
+                .orElseThrow(() -> new ResourceNotFoundException(DomainErrorMessage.ORDER_NOT_FOUND.getMessage()));
+        orderTraceabilityPort.registerTransition(current, EstadoPedidoModel.LISTO, EstadoPedidoModel.ENTREGADO);
+        return current;
     }
 
     @Override

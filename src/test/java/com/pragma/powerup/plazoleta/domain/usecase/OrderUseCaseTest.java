@@ -412,23 +412,23 @@ class OrderUseCaseTest {
                 .pinSeguridad("123456").fechaCreacion(LocalDateTime.now().minusMinutes(10)).items(List.of())
                 .build();
         when(persistencePort.findOrderById(10L)).thenReturn(Optional.of(order));
+        when(persistencePort.deliverOrderIfListoAndPin(10L, 100L, "123456")).thenReturn(1);
 
-        OrderModel saved = OrderModel.builder()
+        OrderModel delivered = OrderModel.builder()
                 .id(10L).idRestaurante(1L).idCliente(50L)
                 .estado(EstadoPedidoModel.ENTREGADO).idEmpleadoAsignado(100L)
                 .pinSeguridad(null).fechaCreacion(order.getFechaCreacion())
                 .fechaEntrega(LocalDateTime.now()).items(List.of())
                 .build();
-        when(persistencePort.saveOrder(any())).thenReturn(saved);
+        when(persistencePort.findOrderById(10L)).thenReturn(Optional.of(order), Optional.of(delivered));
 
         OrderModel result = orderUseCase.deliverOrder(10L, 100L, "123456");
 
         assertEquals(EstadoPedidoModel.ENTREGADO, result.getEstado());
         assertNull(result.getPinSeguridad());
         assertNotNull(result.getFechaEntrega());
-        verify(persistencePort).saveOrder(argThat(o ->
-                o.getEstado() == EstadoPedidoModel.ENTREGADO && o.getPinSeguridad() == null));
-        verify(traceabilityPort).registerTransition(eq(saved), eq(EstadoPedidoModel.LISTO), eq(EstadoPedidoModel.ENTREGADO));
+        verify(persistencePort).deliverOrderIfListoAndPin(10L, 100L, "123456");
+        verify(traceabilityPort).registerTransition(eq(delivered), eq(EstadoPedidoModel.LISTO), eq(EstadoPedidoModel.ENTREGADO));
     }
 
     @Test
@@ -443,7 +443,7 @@ class OrderUseCaseTest {
         BusinessRuleException ex = assertThrows(BusinessRuleException.class,
                 () -> orderUseCase.deliverOrder(10L, 100L, "999999"));
         assertEquals("PIN invalido", ex.getMessage());
-        verify(persistencePort, never()).saveOrder(any());
+        verify(persistencePort, never()).deliverOrderIfListoAndPin(anyLong(), anyLong(), anyString());
         verify(traceabilityPort, never()).registerTransition(any(), any(), any());
     }
 
@@ -473,6 +473,39 @@ class OrderUseCaseTest {
         AccessDeniedException ex = assertThrows(AccessDeniedException.class,
                 () -> orderUseCase.deliverOrder(10L, 999L, "123456"));
         assertEquals(DomainErrorMessage.NOT_ASSIGNED_EMPLOYEE_DELIVER.getMessage(), ex.getMessage());
+    }
+
+    @Test
+    void deliverOrderShouldFailWhenAtomicUpdateAffectsNoRows() {
+        OrderModel order = OrderModel.builder()
+                .id(10L).idRestaurante(1L).idCliente(50L)
+                .estado(EstadoPedidoModel.LISTO).idEmpleadoAsignado(100L)
+                .pinSeguridad("123456").fechaCreacion(LocalDateTime.now()).items(List.of())
+                .build();
+        when(persistencePort.findOrderById(10L)).thenReturn(Optional.of(order));
+        when(persistencePort.deliverOrderIfListoAndPin(10L, 100L, "123456")).thenReturn(0);
+
+        BusinessRuleException ex = assertThrows(BusinessRuleException.class,
+                () -> orderUseCase.deliverOrder(10L, 100L, "123456"));
+        assertEquals(DomainErrorMessage.ORDER_NOT_LISTO.getMessage(), ex.getMessage());
+        verify(traceabilityPort, never()).registerTransition(any(), any(), any());
+    }
+
+    @Test
+    void deliverOrderShouldFailWhenOrderWasAlreadyDelivered() {
+        OrderModel delivered = OrderModel.builder()
+                .id(10L).idRestaurante(1L).idCliente(50L)
+                .estado(EstadoPedidoModel.ENTREGADO).idEmpleadoAsignado(100L)
+                .pinSeguridad(null).fechaCreacion(LocalDateTime.now().minusMinutes(10))
+                .fechaEntrega(LocalDateTime.now().minusMinutes(1)).items(List.of())
+                .build();
+        when(persistencePort.findOrderById(10L)).thenReturn(Optional.of(delivered));
+
+        BusinessRuleException ex = assertThrows(BusinessRuleException.class,
+                () -> orderUseCase.deliverOrder(10L, 100L, "123456"));
+        assertEquals(DomainErrorMessage.ORDER_NOT_LISTO.getMessage(), ex.getMessage());
+        verify(persistencePort, never()).deliverOrderIfListoAndPin(anyLong(), anyLong(), anyString());
+        verify(traceabilityPort, never()).registerTransition(any(), any(), any());
     }
 
     // ========================

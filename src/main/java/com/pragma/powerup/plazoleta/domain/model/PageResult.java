@@ -6,6 +6,7 @@ import java.util.stream.Collectors;
 
 public record PageResult<T>(List<T> content, int page, int size, long totalElements, int totalPages) {
 
+    //TODO buscar Pageable
     public <R> PageResult<R> map(Function<T, R> mapper) {
         List<R> mapped = content.stream().map(mapper).collect(Collectors.toList());
         return new PageResult<>(mapped, page, size, totalElements, totalPages);

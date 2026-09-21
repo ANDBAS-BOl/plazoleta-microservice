@@ -52,6 +52,7 @@ public class OrderRestController {
         return new PageImpl<>(result.content(), PageRequest.of(page, size), result.totalElements());
     }
 
+    //Todo revisar para usar Put en vez de patch, relacionado a idempotencia
     @PatchMapping("/pedidos/{idPedido}/asignar")
     @PreAuthorize("hasRole('EMPLEADO')")
     public OrderResponse takeOrder(@PathVariable Long idPedido,

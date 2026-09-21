@@ -14,6 +14,7 @@ public class JwtTokenProvider {
 
     private final SecretKey signingKey;
 
+    //TODO Revisar como está funcionado el encode o el encryp, si esta tomando o no el texto.
     public JwtTokenProvider(@Value("${security.jwt.secret}") String secret) {
         this.signingKey = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
     }

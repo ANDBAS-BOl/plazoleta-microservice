@@ -28,7 +28,7 @@ public class OrderTraceabilityAdapter implements OrderTraceabilityPort {
         try {
             trazabilidadClient.registrarEvento(payload);
         } catch (Exception ignored) {
-            // Se preserva la semantica actual: falla de trazabilidad no bloquea flujo de negocio.
+            //Todo
         }
     }
 }

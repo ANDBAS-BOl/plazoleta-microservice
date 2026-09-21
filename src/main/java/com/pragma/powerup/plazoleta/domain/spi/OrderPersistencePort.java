@@ -27,5 +27,7 @@ public interface OrderPersistencePort {
 
     int takeOrderIfPending(Long idOrder, Long employeeId);
 
+    int deliverOrderIfListoAndPin(Long idOrder, Long employeeId, String pinSeguridad);
+
     boolean existsPinSeguridad(String pin);
 }

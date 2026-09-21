@@ -75,6 +75,7 @@ public class CatalogUseCase implements CatalogUseCasePort {
                 .categoria(currentDish.getCategoria())
                 .activo(currentDish.getActivo())
                 .build();
+
         catalogPersistencePort.updateDish(updatedDish);
     }
 

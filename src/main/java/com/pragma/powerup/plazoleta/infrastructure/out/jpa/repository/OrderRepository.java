@@ -28,4 +28,13 @@ public interface OrderRepository extends JpaRepository<OrderEntity, Long> {
                            @Param("expectedState") EstadoPedido expectedState,
                            @Param("newState") EstadoPedido newState,
                            @Param("idEmpleado") Long idEmpleado);
+
+    @Modifying(clearAutomatically = true)
+    @Query("update OrderEntity o set o.estado = :newState, o.fechaEntrega = CURRENT_TIMESTAMP, o.pinSeguridad = null " +
+            "where o.id = :id and o.estado = :expectedState and o.idEmpleadoAsignado = :idEmpleado and o.pinSeguridad = :pin")
+    int deliverOrderIfListoAndPin(@Param("id") Long id,
+                                  @Param("expectedState") EstadoPedido expectedState,
+                                  @Param("newState") EstadoPedido newState,
+                                  @Param("idEmpleado") Long idEmpleado,
+                                  @Param("pin") String pin);
 }

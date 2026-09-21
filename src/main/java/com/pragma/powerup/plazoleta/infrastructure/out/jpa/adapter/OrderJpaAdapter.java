@@ -142,6 +142,16 @@ public class OrderJpaAdapter implements OrderPersistencePort {
     }
 
     @Override
+    public int deliverOrderIfListoAndPin(Long idOrder, Long employeeId, String pinSeguridad) {
+        return orderRepository.deliverOrderIfListoAndPin(
+                idOrder,
+                EstadoPedido.LISTO,
+                EstadoPedido.ENTREGADO,
+                employeeId,
+                pinSeguridad);
+    }
+
+    @Override
     public boolean existsPinSeguridad(String pin) {
         return orderRepository.existsByPinSeguridad(pin);
     }
