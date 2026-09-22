@@ -111,14 +111,16 @@ una regla no se cumple.
 
 ### Cobertura actual del microservicio
 
-Última ejecución (`./gradlew clean test jacocoTestReport`):
+Última ejecución (`./gradlew clean check`): **257 pruebas en 39 clases, 0 fallos**,
+verificación de cobertura en verde. Las pruebas corren contra H2 en memoria, sin
+necesidad de levantar MySQL.
 
 | Métrica | Cubierto / Total | % |
 |---|---|---|
-| Instrucciones | 1965 / 2576 | **76,28%** |
-| Ramas | 78 / 108 | **72,22%** |
-| Líneas | 452 / 557 | **81,15%** |
-| Métodos | 106 / 146 | **72,60%** |
+| Instrucciones | 1953 / 2579 | **75,73%** |
+| Ramas | 80 / 110 | **72,73%** |
+| Líneas | 444 / 550 | **80,73%** |
+| Métodos | 106 / 148 | **71,62%** |
 | Clases | 34 / 34 | **100%** |
 
 Cobertura por paquete:
@@ -127,11 +129,17 @@ Cobertura por paquete:
 |---|---|
 | `domain.model` | 100% |
 | `domain.utils` | 100% |
-| `domain.usecase` (núcleo hexagonal) | **96,49%** |
 | `application.mapper` | 100% |
-| `application.handler.impl` | 67,48% |
-| `infrastructure.out.http.adapter` | 92,31% |
+| `domain.usecase` (núcleo hexagonal) | **95,64%** |
 | `infrastructure.out.http.client` | 94,98% |
-| `infrastructure.input.rest` | 29,45% |
-| `infrastructure.out.jpa.adapter` | 33,05% |
+| `infrastructure.out.http.adapter` | 92,31% |
+| `application.handler.impl` | 67,48% |
 | `infrastructure.out.pin` | 38,10% |
+| `infrastructure.out.jpa.adapter` | 32,55% |
+| `infrastructure.input.rest` | 29,45% |
+
+> **Margen sobre el umbral:** el 75,73% de instrucciones deja solo 0,73 puntos sobre el
+> mínimo de 75% que exige `jacocoTestCoverageVerification`. Añadir código sin pruebas a
+> `infrastructure.input.rest` o `infrastructure.out.jpa.adapter`, los dos paquetes más
+> flojos, rompe el build. Son adaptadores finos (controladores y JPA), cubiertos de forma
+> indirecta por los tests de seguridad, validación e integración.
